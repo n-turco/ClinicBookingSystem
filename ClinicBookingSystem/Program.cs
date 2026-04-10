@@ -13,8 +13,6 @@ namespace ClinicBookingSystem
             builder.Services.AddDbContext<ClinicBookingSystemContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("ClinicBookingSystemContext") ?? throw new InvalidOperationException("Connection string 'ClinicBookingSystemContext' not found.")));
 
-            builder.Services.AddDefaultIdentity<AppUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<ClinicBookingSystemContext>();
-
             builder.Services.AddIdentity<AppUser, IdentityRole>() // Configure Identity to use the custom AppUser and the default IdentityRole
                             .AddEntityFrameworkStores<ClinicBookingSystemContext>()
                             .AddDefaultTokenProviders();
@@ -36,6 +34,7 @@ namespace ClinicBookingSystem
             app.UseRouting();
 
             app.UseAuthorization();
+            app.UseAuthentication();
 
             app.MapStaticAssets();
             app.MapControllerRoute(
