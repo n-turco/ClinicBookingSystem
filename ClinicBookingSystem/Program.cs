@@ -1,3 +1,8 @@
+using ClinicBookingSystem.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using ClinicBookingSystem.Models;
 namespace ClinicBookingSystem
 {
     public class Program
@@ -5,6 +10,14 @@ namespace ClinicBookingSystem
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Services.AddDbContext<ClinicBookingSystemContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("ClinicBookingSystemContext") ?? throw new InvalidOperationException("Connection string 'ClinicBookingSystemContext' not found.")));
+
+            builder.Services.AddDefaultIdentity<AppUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<ClinicBookingSystemContext>();
+
+            builder.Services.AddIdentity<AppUser, IdentityRole>() // Configure Identity to use the custom AppUser and the default IdentityRole
+                            .AddEntityFrameworkStores<ClinicBookingSystemContext>()
+                            .AddDefaultTokenProviders();
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();

@@ -13,7 +13,7 @@ namespace ClinicBookingSystem.Models
         [Required]
         public int AppointmentId { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // Timestamp for logging when the booking was made (repudiation)
 
         // Navigation
         [ForeignKey("UserId")]
