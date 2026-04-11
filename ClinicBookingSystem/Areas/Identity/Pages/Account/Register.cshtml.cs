@@ -109,7 +109,7 @@ namespace ClinicBookingSystem.Areas.Identity.Pages.Account
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
-            returnUrl ??= Url.Content("~/");
+            returnUrl ??= Url.Content("~/"); 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
             {
@@ -117,7 +117,8 @@ namespace ClinicBookingSystem.Areas.Identity.Pages.Account
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-                var result = await _userManager.CreateAsync(user, Input.Password);
+                var result = await _userManager.CreateAsync(user, Input.Password); // Create user with specified password
+                await _userManager.AddToRoleAsync(user, "User"); // Assign "User" role to newly registered users
 
                 if (result.Succeeded)
                 {
@@ -151,7 +152,7 @@ namespace ClinicBookingSystem.Areas.Identity.Pages.Account
                 }
             }
 
-            // If we got this far, something failed, redisplay form
+            //redisplay form if something failed
             return Page();
         }
 

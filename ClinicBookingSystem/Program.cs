@@ -9,7 +9,7 @@ namespace ClinicBookingSystem
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<ClinicBookingSystemContext>(options =>
@@ -17,10 +17,9 @@ namespace ClinicBookingSystem
 
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
-                options.User.RequireUniqueEmail = true;
-            }) // Configure Identity to use the custom AppUser and the default IdentityRole
-                            .AddEntityFrameworkStores<ClinicBookingSystemContext>()
-                            .AddDefaultTokenProviders();
+                options.User.RequireUniqueEmail = true; 
+            })  .AddEntityFrameworkStores<ClinicBookingSystemContext>()
+                .AddDefaultTokenProviders(); // Configure Identity to use the custom AppUser and the default IdentityRole
 
             // Add services to the container.
             // Provide a simple No-op email sender so pages that depend on IEmailSender can be activated.
@@ -34,6 +33,13 @@ namespace ClinicBookingSystem
             });
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                await IdentitySeeder.SeedRolesAsync(services);
+                await IdentitySeeder.SeedAdminAsync(services);
+            }
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())

@@ -23,6 +23,7 @@ namespace ClinicBookingSystem.Controllers
 
         // ADMIN: View all bookings
         // USER: View only their bookings
+        [Authorize(Roles = "Admin")] 
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -106,7 +107,7 @@ namespace ClinicBookingSystem.Controllers
         // ADMIN ONLY: Confirm booking deletion
         [HttpPost, ActionName("Delete")]
         [Authorize(Roles = "Admin")]
-        [ValidateAntiForgeryToken]
+        [ValidateAntiForgeryToken] // Prevent CSRF attacks
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
@@ -121,6 +122,7 @@ namespace ClinicBookingSystem.Controllers
         }
         // USER: View their own bookings
         // ADMIN: View all bookings
+        [Authorize] // Both users and admins can access this, but content differs based on role
         public async Task<IActionResult> MyBookings()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -142,10 +144,5 @@ namespace ClinicBookingSystem.Controllers
 
             return View(userBookings);
         }
-
-        //private bool BookingExists(int id)
-        //{
-        //    return _context.Bookings.Any(e => e.Id == id);
-        //}
     }
 }
