@@ -41,8 +41,7 @@ namespace ClinicBookingSystem
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
-                await IdentitySeeder.SeedRolesAsync(services);
-                await IdentitySeeder.SeedAdminAsync(services);
+                await SeedData.InitializeAsync(services); // Seed the database with initial data, including creating an admin user if it doesn't exist
             }
 
             // Configure the HTTP request pipeline.
