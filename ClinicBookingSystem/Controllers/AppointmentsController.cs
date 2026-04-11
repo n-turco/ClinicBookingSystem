@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using ClinicBookingSystem.Data;
+using ClinicBookingSystem.Models;
+using ClinicBookingSystem.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ClinicBookingSystem.Data;
-using ClinicBookingSystem.Models;
 
 namespace ClinicBookingSystem.Controllers
 {
@@ -32,6 +33,13 @@ namespace ClinicBookingSystem.Controllers
         {
             return View();
         }
+        
+
+        [Authorize]
+        public IActionResult Search()
+        {
+            return View(new AppointmentSearchModel());
+        }
 
         // ADMIN: Create appointment (POST)
         [HttpPost]
@@ -55,6 +63,29 @@ namespace ClinicBookingSystem.Controllers
             }
 
             return View(appointment);
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Search(AppointmentSearchModel model)
+        {
+            var query = _context.Appointments
+                .Where(a => a.IsAvailable);
+
+            if (model.StartDate.HasValue)
+            {
+                query = query.Where(a => a.StartTime >= model.StartDate.Value);
+            }
+
+            if (model.EndDate.HasValue)
+            {
+                query = query.Where(a => a.EndTime <= model.EndDate.Value);
+            }
+
+            var results = await query.ToListAsync();
+
+            return View("SearchResults", results);
         }
 
         // ADMIN: Edit appointment
@@ -110,7 +141,7 @@ namespace ClinicBookingSystem.Controllers
 
             return View(appointment);
         }
-
+        
         [HttpPost, ActionName("Delete")]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
@@ -126,5 +157,6 @@ namespace ClinicBookingSystem.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+      
     }
 }

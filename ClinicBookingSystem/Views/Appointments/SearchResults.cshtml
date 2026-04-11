@@ -1,0 +1,35 @@
+﻿@model List<ClinicBookingSystem.Models.Appointment>
+
+<h2>Search Results</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Start</th>
+            <th>End</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.StartTime</td>
+                <td>@item.EndTime</td>
+                <td>@(item.IsAvailable ? "Available" : "Booked")</td>
+                <td>
+                    @if (item.IsAvailable)
+                    {
+                        <a asp-controller="Bookings"
+                               asp-action="Create"
+                               asp-route-id="@item.Id">
+                            Book
+                        </a>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

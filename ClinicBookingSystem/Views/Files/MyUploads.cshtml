@@ -1,0 +1,16 @@
+﻿@model List<ClinicBookingSystem.Models.UploadedFile>
+
+<h2>My Files</h2>
+
+<table class="table">
+    @foreach (var file in Model)
+    {
+        <tr>
+            <td>@file.FileName</td>
+            <td>@file.UploadedAt</td>
+            <td>
+                <a href="@file.FilePath" target="_blank">View</a>
+            </td>
+        </tr>
+    }
+</table>
