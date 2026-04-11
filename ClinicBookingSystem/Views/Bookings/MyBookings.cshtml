@@ -1,0 +1,27 @@
+﻿@model List<ClinicBookingSystem.Models.Booking>
+
+@{
+    ViewData["Title"] = "My Bookings";
+}
+
+<h1>My Bookings</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Booked At</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item?.Appointment?.StartTime</td>
+                <td>@item?.Appointment?.EndTime</td>
+                <td>@item?.CreatedAt</td>
+            </tr>
+        }
+    </tbody>
+</table>

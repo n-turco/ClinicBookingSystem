@@ -1,170 +1,151 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using ClinicBookingSystem.Data;
+﻿using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClinicBookingSystem.Controllers
 {
+    [Authorize]
     public class BookingsController : Controller
     {
         private readonly ClinicBookingSystemContext _context;
+        private readonly UserManager<AppUser> _userManager;
 
-        public BookingsController(ClinicBookingSystemContext context)
+        public BookingsController(
+            ClinicBookingSystemContext context,
+            UserManager<AppUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        // GET: Bookings
+        // ADMIN: View all bookings
+        // USER: View only their bookings
         public async Task<IActionResult> Index()
         {
-            var clinicBookingSystemContext = _context.Bookings.Include(b => b.Appointment).Include(b => b.User);
-            return View(await clinicBookingSystemContext.ToListAsync());
+            var user = await _userManager.GetUserAsync(User);
+
+            if (User.IsInRole("Admin"))
+            {
+                var allBookings = _context.Bookings
+                    .Include(b => b.Appointment)
+                    .Include(b => b.User);
+
+                return View(await allBookings.ToListAsync());
+            }
+
+            var userBookings = _context.Bookings
+                .Where(b => b.UserId == user.Id)
+                .Include(b => b.Appointment);
+
+            return View(await userBookings.ToListAsync());
         }
 
-        // GET: Bookings/Details/5
-        public async Task<IActionResult> Details(int? id)
+
+        // USER: Create booking for an available appointment
+        public async Task<IActionResult> Create(int id)
         {
-            if (id == null)
+            var appointment = await _context.Appointments.FindAsync(id);
+
+            if (appointment == null || !appointment.IsAvailable)
             {
                 return NotFound();
             }
 
-            var booking = await _context.Bookings
-                .Include(b => b.Appointment)
-                .Include(b => b.User)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (booking == null)
-            {
-                return NotFound();
-            }
-
-            return View(booking);
+            return View(appointment);
         }
 
-        // GET: Bookings/Create
-        public IActionResult Create()
-        {
-            ViewData["AppointmentId"] = new SelectList(_context.Appointments, "Id", "Id");
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id");
-            return View();
-        }
-
-        // POST: Bookings/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        // USER: Confirm booking creation
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,UserId,AppointmentId,CreatedAt")] Booking booking)
+        public async Task<IActionResult> CreateConfirmed(int id)
         {
-            if (ModelState.IsValid)
+            var appointment = await _context.Appointments.FindAsync(id);
+
+            if (appointment == null || !appointment.IsAvailable)
             {
-                _context.Add(booking);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return BadRequest("Appointment not available");
             }
-            ViewData["AppointmentId"] = new SelectList(_context.Appointments, "Id", "Id", booking.AppointmentId);
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", booking.UserId);
-            return View(booking);
+
+            var user = await _userManager.GetUserAsync(User);
+
+            var booking = new Booking
+            {
+                AppointmentId = id,
+                UserId = user?.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Prevent double booking
+            appointment.IsAvailable = false;
+
+            _context.Bookings.Add(booking);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
-        // GET: Bookings/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var booking = await _context.Bookings.FindAsync(id);
-            if (booking == null)
-            {
-                return NotFound();
-            }
-            ViewData["AppointmentId"] = new SelectList(_context.Appointments, "Id", "Id", booking.AppointmentId);
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", booking.UserId);
-            return View(booking);
-        }
-
-        // POST: Bookings/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,UserId,AppointmentId,CreatedAt")] Booking booking)
-        {
-            if (id != booking.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(booking);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!BookingExists(booking.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["AppointmentId"] = new SelectList(_context.Appointments, "Id", "Id", booking.AppointmentId);
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", booking.UserId);
-            return View(booking);
-        }
-
-        // GET: Bookings/Delete/5
+        // ADMIN ONLY: Delete booking
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
             var booking = await _context.Bookings
                 .Include(b => b.Appointment)
                 .Include(b => b.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (booking == null)
-            {
-                return NotFound();
-            }
+
+            if (booking == null) return NotFound();
 
             return View(booking);
         }
 
-        // POST: Bookings/Delete/5
+        // ADMIN ONLY: Confirm booking deletion
         [HttpPost, ActionName("Delete")]
+        [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
+
             if (booking != null)
             {
                 _context.Bookings.Remove(booking);
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
-
-        private bool BookingExists(int id)
+        // USER: View their own bookings
+        // ADMIN: View all bookings
+        public async Task<IActionResult> MyBookings()
         {
-            return _context.Bookings.Any(e => e.Id == id);
+            var user = await _userManager.GetUserAsync(User);
+
+            if (User.IsInRole("Admin"))
+            {
+                var allBookings = _context.Bookings
+                    .Include(b => b.Appointment)
+                    .Include(b => b.User)
+                    .ToList();
+
+                return View(allBookings);
+            }
+
+            var userBookings = _context.Bookings
+                .Where(b => b.UserId == user.Id)
+                .Include(b => b.Appointment)
+                .ToList();
+
+            return View(userBookings);
         }
+
+        //private bool BookingExists(int id)
+        //{
+        //    return _context.Bookings.Any(e => e.Id == id);
+        //}
     }
 }
