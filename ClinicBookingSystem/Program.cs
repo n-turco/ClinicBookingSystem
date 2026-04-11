@@ -27,6 +27,11 @@ namespace ClinicBookingSystem
             builder.Services.AddSingleton<IEmailSender, NoOpEmailSender>();
             builder.Services.AddControllersWithViews();
             builder.Services.AddRazorPages(); // Add Razor Pages for Identity UI (login, register, etc.)
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Identity/Account/Login"; // Set the login path for unauthenticated users
+                options.AccessDeniedPath = "/Identity/Account/AccessDenied"; // Set the access denied path for unauthorized users
+            });
 
             var app = builder.Build();
 
