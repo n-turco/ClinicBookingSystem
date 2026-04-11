@@ -24,7 +24,7 @@ namespace ClinicBookingSystem.Data
             var userManager = serviceProvider.GetRequiredService<UserManager<AppUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            string adminEmail = "admin@clinic.com";
+            string adminEmail = "admin@clinic.com"; // Admin login info
             string adminPassword = "Admin123!";
 
             if (await userManager.FindByEmailAsync(adminEmail) == null)

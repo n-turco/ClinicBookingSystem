@@ -1,6 +1,6 @@
 ﻿using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
-using ClinicBookingSystem.ViewModels;
+using ClinicBookingSystem.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

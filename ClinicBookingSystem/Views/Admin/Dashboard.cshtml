@@ -1,0 +1,59 @@
+﻿@model ClinicBookingSystem.Models.ViewModels.AdminDashboardViewModel
+
+<h1>Admin Dashboard</h1>
+
+<hr />
+
+<div class="row">
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h4>Bookings</h4>
+            <p>@Model.TotalBookings</p>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h4>Appointments</h4>
+            <p>@Model.TotalAppointments</p>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h4>Users</h4>
+            <p>@Model.TotalUsers</p>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h4>Uploads</h4>
+            <p>@Model.TotalUploads</p>
+        </div>
+    </div>
+
+</div>
+
+<hr />
+
+<h3>Admin Actions</h3>
+
+<ul>
+    <li>
+        <a asp-controller="Appointments" asp-action="Create">
+            Create Appointment
+        </a>
+    </li>
+    <li>
+        <a asp-controller="Bookings" asp-action="Index">
+            View All Bookings
+        </a>
+    </li>
+    <li>
+        <a asp-controller="UploadedFiles" asp-action="Index">
+            View All Uploads
+        </a>
+    </li>
+</ul>

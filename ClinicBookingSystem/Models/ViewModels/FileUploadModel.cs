@@ -1,4 +1,4 @@
-﻿namespace ClinicBookingSystem.ViewModels
+﻿namespace ClinicBookingSystem.Models.ViewModels
 {
     public class FileUploadModel
     {
