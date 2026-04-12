@@ -21,16 +21,9 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                        @if (User.Identity.IsAuthenticated)
+                        @if (User?.Identity?.IsAuthenticated == true)
                         {
-                            @if (User.IsInRole("Admin"))
+                            @if (User?.IsInRole("Admin") == true)
                             {
                                 <li class="nav-item">
                                     <a class="nav-link text-dark"
@@ -42,7 +35,19 @@
                             }
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Bookings" asp-action="MyBookings">
-                                    My Bookings
+                                   @if (User?.IsInRole("Admin") == true)
+                                    {
+                                        <text>All Bookings</text>
+                                    }
+                                    else
+                                    {
+                                        <text>My Bookings</text>
+                                    } 
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Files" asp-action="MyUploads">
+                                    My Files
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -84,7 +89,9 @@
                                 </a>
                             </li>
                         }
-
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        </li>
                     </ul>
                 </div>
             </div>

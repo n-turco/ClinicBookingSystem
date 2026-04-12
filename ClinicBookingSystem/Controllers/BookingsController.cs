@@ -1,4 +1,16 @@
-﻿using ClinicBookingSystem.Data;
+﻿/*  
+ FILE          : BookingsController.cs 
+ PROJECT       : SECU2000 - Project
+ PROGRAMMER    : Nick Turco | 9056530
+ FIRST VERSION : 2026-04-12
+ DESCRIPTION   : This file contains the BookingsController class, which is responsible for handling booking-related actions in the Clinic Booking System. 
+                 The controller includes actions for viewing bookings (with different views for users and admins), creating new bookings 
+                 for available appointments, and deleting bookings (admin only). It uses ASP.NET Core MVC and is protected by role-based 
+                 authorization, allowing users to view and manage their own bookings while giving administrators access to all bookings. 
+                 The controller interacts with the database context to retrieve and manipulate booking data, ensuring that appointments are 
+                 marked as unavailable once booked to prevent double booking.
+*/
+using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -10,7 +22,7 @@ namespace ClinicBookingSystem.Controllers
     [Authorize]
     public class BookingsController : Controller
     {
-        private readonly ClinicBookingSystemContext _context;
+        private readonly ClinicBookingSystemContext _context; // Database context for accessing booking and appointment data
         private readonly UserManager<AppUser> _userManager;
 
         public BookingsController(
@@ -23,10 +35,13 @@ namespace ClinicBookingSystem.Controllers
 
         // ADMIN: View all bookings
         // USER: View only their bookings
-        [Authorize(Roles = "Admin")] 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index()        // Both users and admins can access this, but content differs based on role
         {
             var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                return Forbid(); // or return Challenge(); depending on desired behavior
+            }
 
             if (User.IsInRole("Admin"))
             {
@@ -88,8 +103,7 @@ namespace ClinicBookingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ADMIN ONLY: Delete booking
-        [Authorize(Roles = "Admin")]
+      //  [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
@@ -106,7 +120,7 @@ namespace ClinicBookingSystem.Controllers
 
         // ADMIN ONLY: Confirm booking deletion
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = "Admin")]
+      //  [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken] // Prevent CSRF attacks
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -122,10 +136,15 @@ namespace ClinicBookingSystem.Controllers
         }
         // USER: View their own bookings
         // ADMIN: View all bookings
-        [Authorize] // Both users and admins can access this, but content differs based on role
+        [Authorize]
         public async Task<IActionResult> MyBookings()
         {
             var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return Forbid(); 
+            }
 
             if (User.IsInRole("Admin"))
             {

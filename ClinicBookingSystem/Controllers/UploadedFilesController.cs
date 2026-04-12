@@ -1,4 +1,15 @@
-﻿using System;
+﻿/*  
+ FILE          : UploadedFilesController.cs 
+ PROJECT       : SECU2000 - Project
+ PROGRAMMER    : Nick Turco | 9056530
+ FIRST VERSION : 2026-04-12
+ DESCRIPTION   : This file contains the UploadedFilesController class, which is responsible for handling CRUD operations related to uploaded files in the Clinic Booking System. 
+                 The controller includes actions for listing all uploaded files, viewing details of a specific file, creating new file records, editing existing file records, and deleting file records. 
+                 It uses ASP.NET Core MVC and is protected by authorization, allowing only authenticated users to access its actions. 
+                 The controller interacts with the database context to retrieve and manipulate data about uploaded files, including 
+                 their metadata such as file name, path, content type, size, upload time, and associated user ID.
+*/
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

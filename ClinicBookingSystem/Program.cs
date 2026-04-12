@@ -1,3 +1,14 @@
+/*  
+ FILE          : Program.cs 
+ PROJECT       : SECU2000 - Project
+ PROGRAMMER    : Nick Turco | 9056530
+ FIRST VERSION : 2026-04-12
+ DESCRIPTION   : This application is a clinic booking system that allows users to book appointments, 
+                 manage their bookings, and view available time slots. It also includes an admin interface for 
+                 managing appointments, and users. The application uses ASP.NET Core MVC for the web 
+                 interface and Entity Framework Core for data access. Identity is used for user authentication 
+                 and authorization, allowing for role-based access control between regular users and administrators.
+*/
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
 using Microsoft.AspNetCore.Identity;

@@ -1,4 +1,16 @@
-﻿using ClinicBookingSystem.Data;
+﻿/*  
+ FILE          : AppointmentController.cs 
+ PROJECT       : SECU2000 - Project
+ PROGRAMMER    : Nick Turco | 9056530
+ FIRST VERSION : 2026-04-12
+ DESCRIPTION   : This file contains the AppointmentsController class, which is responsible for handling appointment-related 
+                 actions in the Clinic Booking System. The controller includes actions for viewing available appointments, 
+                 creating new appointments (admin only), editing and deleting appointments (admin only), and searching for 
+                 appointments based on date criteria. It uses ASP.NET Core MVC and is protected by role-based authorization, 
+                 allowing only users with the "Admin" role to access certain actions. The controller interacts with the database 
+                 context to retrieve and manipulate appointment data.
+*/
+using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
 using ClinicBookingSystem.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;

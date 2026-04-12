@@ -1,4 +1,15 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿/*  
+ FILE          : SeedData.cs 
+ PROJECT       : SECU2000 - Project
+ PROGRAMMER    : Nick Turco | 9056530
+ FIRST VERSION : 2026-04-12
+ DESCRIPTION   : This file contains the SeedData class, which is responsible for seeding initial data into the Clinic Booking System database. 
+                 The class includes an asynchronous method InitializeAsync that creates default roles (Admin and User), a default admin user, 
+                 and several sample users. It also seeds sample appointments into the database if no appointments exist. The method uses 
+                 ASP.NET Core Identity to manage user and role creation, and it interacts with the database context to add appointments. 
+                 This seeding process ensures that the application has necessary data for testing and development purposes.
+*/
+using Microsoft.AspNetCore.Identity;
 using ClinicBookingSystem.Models;
 
 namespace ClinicBookingSystem.Data
