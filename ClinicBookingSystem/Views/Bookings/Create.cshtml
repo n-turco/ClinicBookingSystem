@@ -1,28 +1,48 @@
-﻿@model ClinicBookingSystem.Models.Appointment
+﻿@model ClinicBookingSystem.Models.Appointment?
 
 @{
     ViewData["Title"] = "Confirm Booking";
 }
 
-<h1>Confirm Booking</h1>
+@if (Model == null)
+{
+    <h1>Confirm Booking</h1>
+    <hr />
+    <p>Appointment not found.</p>
 
-<hr />
+    <div class="mt-2">
+        <a asp-controller="Appointments" asp-action="Index">Back to Appointments</a>
+    </div>
+}
+else
+{
+    <h1>Confirm Booking</h1>
 
-<div>
-    <h4>Appointment Details</h4>
+    <hr />
 
-    <p><strong>Start:</strong> @Model.StartTime</p>
-    <p><strong>End:</strong> @Model.EndTime</p>
-</div>
+    <div>
+        <h4>Appointment Details</h4>
 
-<form asp-action="CreateConfirmed" method="post">
-    <input type="hidden" name="id" value="@Model.Id" />
+        <p><strong>Start:</strong> @Model.StartTime</p>
+        <p><strong>End:</strong> @Model.EndTime</p>
+    </div>
 
-    <button type="submit" class="btn btn-primary">
-        Confirm Booking
-    </button>
-</form>
+    @if (User?.Identity?.IsAuthenticated != true)
+    {
+        <p>User not Validated</p>
+    }
+    else
+    {
+        <form asp-action="CreateConfirmed" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
 
-<div class="mt-2">
-    <a asp-controller="Appointments" asp-action="Index">Back to Appointments</a>
-</div>
+            <button type="submit" class="btn btn-primary">
+                Confirm Booking
+            </button>
+        </form>
+    }
+
+    <div class="mt-2">
+        <a asp-controller="Appointments" asp-action="Index">Back to Appointments</a>
+    </div>
+}

@@ -15,17 +15,19 @@
         </tr>
     </thead>
     <tbody>
-        @foreach (var item in Model)
+        @foreach (var item in Model ?? new List<ClinicBookingSystem.Models.Booking>())
         {
             <tr>
-                @if (User.IsInRole("Admin"))
+                @if (User?.IsInRole("Admin") ?? false)
                 {
                     <td>@item?.User?.UserName</td>
                 }
-                
                 <td>@item?.Appointment?.StartTime</td>
                 <td>@item?.Appointment?.EndTime</td>
                 <td>@item?.CreatedAt</td>
+                <td>
+                    <a asp-action="Delete" asp-route-id="@item?.Id">Delete</a>
+                </td>
             </tr>
         }
     </tbody>

@@ -29,7 +29,7 @@ public class AdminController : Controller
         _context = context;
         _userManager = userManager;     // Inject the database context and user manager through the constructor
     }
-
+    [Authorize(Roles = "Admin")]        // Ensure that only users with the "Admin" role can access the Dashboard action
     public IActionResult Dashboard()
     {
         var model = new AdminDashboardViewModel     // Create a view model to hold the dashboard data
@@ -43,7 +43,7 @@ public class AdminController : Controller
         return View(model);
     }
 
-    [Authorize(Roles = "Admin")]        // Ensure that only users with the "Admin" role can access the Users action
+    [Authorize(Roles = "Admin")]        
     public IActionResult Users()
     {
         var users = _userManager.Users.ToList();

@@ -102,8 +102,73 @@ namespace ClinicBookingSystem.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var user = await _userManager.GetUserAsync(User);
 
-      //  [Authorize(Roles = "Admin")]
+            if (user == null)
+            {
+                return Forbid();
+            }
+
+            var booking = await _context.Bookings
+                .Include(b => b.Appointment)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (booking == null)
+            {
+                return NotFound();
+            }
+
+            // SECURITY: Users can only edit their own bookings unless admin
+            if (!User.IsInRole("Admin") && booking.UserId != user.Id)
+            {
+                return Forbid();
+            }
+
+            return View(booking);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Booking updatedBooking)
+        {
+            if (id != updatedBooking.Id)
+            {
+                return BadRequest();
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user == null)
+            {
+                return Forbid();
+            }
+
+            var booking = await _context.Bookings
+                .Include(b => b.Appointment)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (booking == null)
+            {
+                return NotFound();
+            }
+
+            // SECURITY: ownership enforcement
+            if (!User.IsInRole("Admin") && booking.UserId != user.Id)
+            {
+                return Forbid();
+            }
+
+            // Update allowed fields only (prevents overposting)
+            booking.AppointmentId = updatedBooking.AppointmentId;
+
+            _context.Update(booking);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null) return NotFound();
