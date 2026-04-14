@@ -16,12 +16,16 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Logger;
+using Microsoft.Identity.Client;
 namespace ClinicBookingSystem
 {
     public class Program
     {
+        public static Log logger = new Log("ClinicBookingLog");
         public static async Task Main(string[] args)
         {
+            
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<ClinicBookingSystemContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("ClinicBookingSystemContext") ?? throw new InvalidOperationException("Connection string 'ClinicBookingSystemContext' not found.")));
@@ -48,6 +52,7 @@ namespace ClinicBookingSystem
             });
 
             var app = builder.Build();
+            logger.LogInfo("Application started successfully.");
 
             using (var scope = app.Services.CreateScope())
             {
@@ -58,8 +63,8 @@ namespace ClinicBookingSystem
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                logger.LogError("An error occurred while processing the request.");
+                app.UseExceptionHandler("/Home/Error");         
                 app.UseHsts();
             }
 

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
+using ClinicBookingSystem;
 
 [Authorize]
 public class FilesController : Controller
@@ -40,6 +41,7 @@ public class FilesController : Controller
     {
         if (file == null || file.Length == 0)
         {
+            Program.logger.LogWarn("User attempted to upload an empty file.");
             ModelState.AddModelError("", "Invalid file");
             return View();
         }
@@ -47,6 +49,7 @@ public class FilesController : Controller
         // SIZE LIMIT (5MB)
         if (file.Length > 5 * 1024 * 1024)
         {
+            Program.logger.LogWarn($"User attempted to upload a file that is too large: {file.FileName} ({file.Length} bytes).");
             ModelState.AddModelError("", "File too large");
             return View();
         }
@@ -65,8 +68,9 @@ public class FilesController : Controller
             "application/json"
         };
 
-        if (!allowedTypes.Contains(file.ContentType))
+        if (!allowedTypes.Contains(file.ContentType))   //MIME type validation is not trusted alone, also checking file signatures.
         {
+            Program.logger.LogWarn($"User attempted to upload a file with an invalid content type: {file.FileName} ({file.ContentType}).");
             ModelState.AddModelError("", "Invalid file type");
             return View();
         }
@@ -80,18 +84,20 @@ public class FilesController : Controller
         // sanitize original filename fallback if null/empty
         var originalFileName = Path.GetFileName(file.FileName ?? Guid.NewGuid().ToString());
 
-        var uniqueFileName = Guid.NewGuid() + "_" + originalFileName;
+        var uniqueFileName = Guid.NewGuid() + "_" + originalFileName;      // prepend GUID to ensure uniqueness and prevent overwriting
 
         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
         using (FileStream stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
+            Program.logger.LogInfo($"Saving uploaded file: {file.FileName} as {uniqueFileName} at {filePath}");
         }
         // Save file metadata to database
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {
+            Program.logger.LogError("Authenticated user does not have a NameIdentifier claim. Unable to associate uploaded file with user.");
             // no user id claim unauthorized
             return Unauthorized();
         }
@@ -108,6 +114,7 @@ public class FilesController : Controller
 
         _context.UploadedFiles.Add(uploadedFile);
         await _context.SaveChangesAsync();
+        Program.logger.LogInfo($"File metadata saved to database for file: {file.FileName} (ID: {uploadedFile.Id}) associated with user ID: {userId}.");    
 
         return RedirectToAction("MyUploads");
     }
@@ -118,6 +125,7 @@ public class FilesController : Controller
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {
+            Program.logger.LogError("Authenticated user does not have a NameIdentifier claim. Unable to retrieve uploaded files for user.");
             return Unauthorized();
         }
         var userId = userIdClaim.Value;

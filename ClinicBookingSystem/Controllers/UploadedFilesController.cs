@@ -42,6 +42,7 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id == null)
             {
+                Program.logger.LogWarn("Attempted to access details of an uploaded file with a null ID.");
                 return NotFound();
             }
 
@@ -64,8 +65,6 @@ namespace ClinicBookingSystem.Controllers
         }
 
         // POST: UploadedFiles/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,FileName,FilePath,ContentType,FileSize,UploadedAt,UserId")] UploadedFile uploadedFile)
@@ -91,6 +90,7 @@ namespace ClinicBookingSystem.Controllers
             var uploadedFile = await _context.UploadedFiles.FindAsync(id);
             if (uploadedFile == null)
             {
+                Program.logger.LogWarn($"Attempted to edit an uploaded file with ID {id}, but it was not found.");
                 return NotFound();
             }
             ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", uploadedFile.UserId);
@@ -106,6 +106,7 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id != uploadedFile.Id)
             {
+                Program.logger.LogWarn($"Attempted to edit an uploaded file with mismatched ID. Provided ID: {id}, UploadedFile ID: {uploadedFile.Id}");
                 return NotFound();
             }
 
@@ -120,6 +121,7 @@ namespace ClinicBookingSystem.Controllers
                 {
                     if (!UploadedFileExists(uploadedFile.Id))
                     {
+                        Program.logger.LogWarn($"Concurrency issue while editing uploaded file with ID {uploadedFile.Id}. The file was not found during update.");
                         return NotFound();
                     }
                     else
@@ -138,6 +140,7 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id == null)
             {
+                Program.logger.LogWarn("Attempted to access delete confirmation for an uploaded file with a null ID.");
                 return NotFound();
             }
 
@@ -146,6 +149,7 @@ namespace ClinicBookingSystem.Controllers
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (uploadedFile == null)
             {
+                Program.logger.LogWarn($"Attempted to access delete confirmation for uploaded file with ID {id}, but it was not found.");
                 return NotFound();
             }
 

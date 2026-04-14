@@ -40,6 +40,7 @@ namespace ClinicBookingSystem.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
+                Program.logger.LogWarn("Unauthenticated user attempted to access bookings index."); 
                 return Forbid(); // or return Challenge(); depending on desired behavior
             }
 
@@ -67,6 +68,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (appointment == null || !appointment.IsAvailable)
             {
+                Program.logger.LogWarn($"User attempted to create a booking for an invalid or unavailable appointment (ID: {id}).");
                 return NotFound();
             }
 
@@ -82,6 +84,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (appointment == null || !appointment.IsAvailable)
             {
+                Program.logger.LogWarn($"User attempted to confirm a booking for an invalid or unavailable appointment (ID: {id}).");
                 return BadRequest("Appointment not available");
             }
 
@@ -109,6 +112,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
+                Program.logger.LogWarn("Unauthenticated user attempted to access booking edit page.");
                 return Forbid();
             }
 
@@ -118,12 +122,14 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null)
             {
+                Program.logger.LogWarn($"User attempted to edit a non-existent booking (ID: {id}).");
                 return NotFound();
             }
 
             // SECURITY: Users can only edit their own bookings unless admin
             if (!User.IsInRole("Admin") && booking.UserId != user.Id)
             {
+                Program.logger.LogWarn($"User (ID: {user.Id}) attempted to edit a booking they do not own (Booking ID: {id}).");
                 return Forbid();
             }
 
@@ -135,6 +141,7 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id != updatedBooking.Id)
             {
+                Program.logger.LogWarn($"User attempted to edit a booking with mismatched ID (URL ID: {id}, Booking ID: {updatedBooking.Id}).");
                 return BadRequest();
             }
 
@@ -142,6 +149,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
+                Program.logger.LogWarn("Unauthenticated user attempted to submit booking edit.");
                 return Forbid();
             }
 
@@ -151,12 +159,14 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null)
             {
+                Program.logger.LogWarn($"User attempted to edit a non-existent booking (ID: {id}).");   
                 return NotFound();
             }
 
             // SECURITY: ownership enforcement
             if (!User.IsInRole("Admin") && booking.UserId != user.Id)
             {
+                Program.logger.LogWarn($"User (ID: {user.Id}) attempted to edit a booking they do not own (Booking ID: {id}).");
                 return Forbid();
             }
 
@@ -183,9 +193,7 @@ namespace ClinicBookingSystem.Controllers
             return View(booking);
         }
 
-        // ADMIN ONLY: Confirm booking deletion
         [HttpPost, ActionName("Delete")]
-      //  [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken] // Prevent CSRF attacks
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -208,6 +216,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
+                Program.logger.LogWarn("Unauthenticated user attempted to access MyBookings page.");
                 return Forbid(); 
             }
 

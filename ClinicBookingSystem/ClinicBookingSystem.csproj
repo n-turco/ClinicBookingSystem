@@ -27,4 +27,8 @@
     <None Include="wwwroot\images\security.jpg" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Logger\Logger.csproj" />
+  </ItemGroup>
+
 </Project>

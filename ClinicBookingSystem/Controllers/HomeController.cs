@@ -20,7 +20,6 @@ namespace ClinicBookingSystem.Controllers
     {
         public IActionResult Index()
         {
-          //  return Redirect("/Identity/Account/Login"); // Redirect to the login page as the default landing page
            return View();
         }
 
@@ -32,6 +31,7 @@ namespace ClinicBookingSystem.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
+            Program.logger.LogError("An error occurred while processing the request."); 
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }

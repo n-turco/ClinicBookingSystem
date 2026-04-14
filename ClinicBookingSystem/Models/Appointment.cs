@@ -16,5 +16,6 @@ namespace ClinicBookingSystem.Models
 
         // Navigation
         public ICollection<Booking>? Bookings { get; set; }
+
     }
 }

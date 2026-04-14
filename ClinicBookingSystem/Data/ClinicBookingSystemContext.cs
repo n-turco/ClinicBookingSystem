@@ -18,5 +18,6 @@ namespace ClinicBookingSystem.Data
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<UploadedFile> UploadedFiles { get; set; }
+
     }
 }

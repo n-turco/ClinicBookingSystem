@@ -162,7 +162,6 @@ namespace ClinicBookingSystem.Data
                         IsAvailable = true
                     }
                 );
-
                 await context.SaveChangesAsync();
             }
         }

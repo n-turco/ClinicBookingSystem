@@ -34,7 +34,7 @@
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+@foreach (var item in Model ?? System.Linq.Enumerable.Empty<ClinicBookingSystem.Models.UploadedFile>()) {
         <tr>
             <td>
                 @Html.DisplayFor(modelItem => item.FileName)
@@ -52,7 +52,10 @@
                 @Html.DisplayFor(modelItem => item.UploadedAt)
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.User.Id)
+                @if (item.User != null)
+                {
+                    @Html.DisplayFor(modelItem => item.User.Id)
+                }
             </td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |

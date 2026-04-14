@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="ClinicBookingSystem/ClinicBookingSystem.csproj" />
+  <Project Path="Logger/Logger.csproj" Id="ff9c1ff0-f623-416f-b6c9-0489ae85362c" />
 </Solution>
