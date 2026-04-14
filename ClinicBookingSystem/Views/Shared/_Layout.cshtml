@@ -46,9 +46,22 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Files" asp-action="MyUploads">
-                                    My Files
-                                </a>
+                                @if (User?.IsInRole("Admin") == true)
+                                {
+                                    <a class="nav-link text-dark"
+                                           asp-controller="UploadedFiles"
+                                           asp-action="Index">
+                                        All Uploads
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a class="nav-link text-dark"
+                                           asp-controller="Files"
+                                           asp-action="MyUploads">
+                                        My Uploads
+                                    </a>
+                                }
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Appointments" asp-action="Search">

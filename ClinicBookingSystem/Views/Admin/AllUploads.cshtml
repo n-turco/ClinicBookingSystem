@@ -1,0 +1,25 @@
+﻿@model List<ClinicBookingSystem.Models.UploadedFile>
+
+<h2>All Files</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>User ID</th>
+            <th>File Name</th>
+            <th>File Size</th>
+            <th>Uploaded At</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Id</td>
+                <td>@user.FileName</td>
+                <td>@user.FileSize</td>
+                <td>@user.UploadedAt</td>
+            </tr>
+        }
+    </tbody>
+</table>
