@@ -69,9 +69,12 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Files" asp-action="Upload">
-                                    Upload File
-                                </a>
+                                    @if(User?.IsInRole("User") == true)
+                                    {
+                                    <a class="nav-link text-dark" asp-controller="Files" asp-action="Upload">
+                                        Upload File
+                                    </a>
+                                    }
                             </li>
                             <li class="nav-item">
                                 <form asp-area="Identity"

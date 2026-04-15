@@ -7,7 +7,8 @@
                  The controller includes actions for uploading files (with validation for file size and type) and viewing a user's uploaded files. 
                  It uses ASP.NET Core MVC and is protected by authorization, allowing only authenticated users to access its actions. 
                  The controller interacts with the database context to save metadata about uploaded files, including the file name, path, content type, upload time, and associated user ID. 
-                 Uploaded files are stored in a designated "uploads" folder within the web root directory of the application.
+                 Uploaded files are stored in a designated "UploadedFiles" folder located relative to the application's content root (outside the web root).
+                 The runtime path used is: Path.Combine(env.ContentRootPath, "UploadedFiles")
 */
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -75,10 +76,10 @@ public class FilesController : Controller
             return View();
         }
 
-        var webRoot = _env.WebRootPath ?? throw new InvalidOperationException("WebRootPath is not configured");
-        var uploadsFolder = Path.Combine(webRoot, "uploads");
-
-        // ensure folder exists
+        // Save uploads to the designated uploads folder relative to the application's content root (outside web root)
+        var contentRoot = _env.ContentRootPath ?? throw new InvalidOperationException("ContentRootPath is not configured");
+        var uploadsFolder = Path.Combine(contentRoot, "UploadedFiles");
+        // ensure folder exists and has correct permissions
         Directory.CreateDirectory(uploadsFolder);
 
         // sanitize original filename fallback if null/empty
@@ -106,7 +107,8 @@ public class FilesController : Controller
         UploadedFile uploadedFile = new UploadedFile
         {
             FileName = file.FileName,
-            FilePath = "/uploads/" + uniqueFileName,
+            // Store the relative path (to content root) for portability. Serving should be done via an authenticated endpoint.
+            FilePath = Path.Combine("UploadedFiles", uniqueFileName),
             ContentType = file.ContentType,
             UploadedAt = DateTime.UtcNow,
             UserId = userId
@@ -120,6 +122,7 @@ public class FilesController : Controller
     }
 
     // View user uploads
+    [Authorize(Roles = "User")]
     public IActionResult MyUploads()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
