@@ -47,8 +47,9 @@ namespace ClinicBookingSystem
                 options.AccessDeniedPath = "/Identity/Account/AccessDenied"; // Set the access denied path for unauthorized users
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Set cookie expiration time
                 options.SlidingExpiration = true; // Enable sliding expiration
-
+                options.Cookie.SameSite = SameSiteMode.Strict; // Set SameSite policy for the cookie
                 options.Cookie.IsEssential = true; // Mark the cookie as essential for GDPR compliance
+                options.Cookie.HttpOnly = true; // Set HttpOnly to prevent client-side access to the cookie
             });
 
             var app = builder.Build();
