@@ -64,7 +64,7 @@ Additional sample users: `BobB@clinic.com`, `NickT@clinic.com`, `SaraS@clinic.co
 
 5. Open a browser and navigate to `https://localhost:5001` (or the port printed by the app). The seeded demo accounts will be available after the initial seed runs.
 
-## Developer Credentials / Notes
+## Developer
 
 Nicholas Turco
 
