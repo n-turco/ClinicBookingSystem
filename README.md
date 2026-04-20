@@ -66,9 +66,6 @@ Additional sample users: `BobB@clinic.com`, `NickT@clinic.com`, `SaraS@clinic.co
 
 ## Developer Credentials / Notes
 
-- Project owner / maintainer account: use the seeded `admin@clinic.com` for administrative tasks during local development.
-- To create a developer account or reset credentials, use the `UserManager` APIs in code, or remove the seeded users/roles in `SeedData` and create new ones.
-- Seed data is executed during application startup (see `Program.cs`) inside a scoped service provider — modify `SeedData.InitializeAsync` if you want different initial users/roles or sample data.
-- Keep the `NoOpEmailSender` only for development; replace with a real `IEmailSender` implementation for sending confirmation emails in staging/production.
+Nicholas Turco
 
 ---
