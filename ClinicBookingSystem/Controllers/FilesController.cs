@@ -139,4 +139,58 @@ public class FilesController : Controller
 
         return View(files);
     }
+
+    // GET: /Files/ViewDocument/{id}
+    // Streams the requested file to the authenticated user after authorization check.
+    [HttpGet]
+    public async Task<IActionResult> ViewDocument(int id)
+    {
+        var uploadedFile = await _context.UploadedFiles.FindAsync(id);
+        if (uploadedFile == null)
+        {
+            Program.logger.LogWarn($"ViewDocument requested for non-existent file ID {id}.");
+            return NotFound();
+        }
+
+        // Verify ownership or that the user is in an allowed role (e.g., Admin)
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+        {
+            Program.logger.LogError("Authenticated user does not have a NameIdentifier claim. View denied.");
+            return Unauthorized();
+        }
+        var userId = userIdClaim.Value;
+        if (uploadedFile.UserId != userId && !User.IsInRole("Admin"))
+        {
+            Program.logger.LogWarn($"User {userId} attempted to view file {uploadedFile.Id} owned by {uploadedFile.UserId}.");
+            return Forbid();
+        }
+
+        var physicalPath = Path.Combine(_env.ContentRootPath, uploadedFile.FilePath ?? string.Empty);
+        if (!System.IO.File.Exists(physicalPath))
+        {
+            Program.logger.LogWarn($"Requested file not found on disk: {physicalPath}");
+            return NotFound();
+        }
+
+        // Content types that browsers can render inline
+        var inlineContentTypes = new[] { "application/pdf", "image/jpeg", "image/png", "image/gif", "text/plain" };
+
+        Program.logger.LogInfo($"User {userId} is viewing file {uploadedFile.Id} from {physicalPath}.");
+
+        var stream = System.IO.File.OpenRead(physicalPath);
+        var contentType = uploadedFile.ContentType ?? "application/octet-stream";
+
+        if (inlineContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
+        {
+            // Tell browser to display inline
+            Response.Headers["Content-Disposition"] = $"inline; filename=\"{uploadedFile.FileName}\"";
+        }
+        else
+        {
+            Response.Headers["Content-Disposition"] = $"attachment; filename=\"{uploadedFile.FileName}\"";
+        }
+
+        return File(stream, contentType);
+    }
 }

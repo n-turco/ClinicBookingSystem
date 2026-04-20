@@ -8,8 +8,8 @@
         <tr>
             <td>@file.FileName</td>
             <td>@file.UploadedAt</td>
-            <td>
-                <a href="@file.FilePath" target="_blank">View</a>
+    <td>
+                <a asp-controller="Files" asp-action="ViewDocument" asp-route-id="@file.Id" target="_blank">View</a>
             </td>
         </tr>
     }

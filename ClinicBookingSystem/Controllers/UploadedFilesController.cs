@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicBookingSystem.Controllers
 {
@@ -73,6 +74,7 @@ namespace ClinicBookingSystem.Controllers
             {
                 _context.Add(uploadedFile);
                 await _context.SaveChangesAsync();
+                Program.logger.LogInfo($"A new uploaded file record was created with ID {uploadedFile.Id} by user ID {uploadedFile.UserId}.");
                 return RedirectToAction(nameof(Index));
             }
             ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", uploadedFile.UserId);
@@ -80,6 +82,7 @@ namespace ClinicBookingSystem.Controllers
         }
 
         // GET: UploadedFiles/Edit/5
+        [Authorize(Roles = "User")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -119,7 +122,7 @@ namespace ClinicBookingSystem.Controllers
                 {
                     if (!UploadedFileExists(uploadedFile.Id))
                     {
-                        Program.logger.LogWarn($"Concurrency issue while editing uploaded file with ID {uploadedFile.Id}. The file was not found during update.");
+                        Program.logger.LogWarn($"Issue while editing uploaded file with ID {uploadedFile.Id}. The file was not found during update.");
                         return NotFound();
                     }
                     else
