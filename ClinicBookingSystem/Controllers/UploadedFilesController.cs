@@ -28,10 +28,12 @@ namespace ClinicBookingSystem.Controllers
     public class UploadedFilesController : Controller
     {
         private readonly ClinicBookingSystemContext _context;
+        private readonly ILogger<UploadedFilesController> _logger;
 
-        public UploadedFilesController(ClinicBookingSystemContext context)
+        public UploadedFilesController(ClinicBookingSystemContext context, ILogger<UploadedFilesController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: UploadedFiles
@@ -46,7 +48,7 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id == null)
             {
-                Program.logger.LogWarn("Attempted to access details of an uploaded file with a null ID.");
+                _logger.LogWarning("Uploaded file details requested without an ID.");
                 return NotFound();
             }
 
@@ -76,7 +78,7 @@ namespace ClinicBookingSystem.Controllers
             var uploadedFile = await _context.UploadedFiles.FindAsync(id);
             if (uploadedFile == null)
             {
-                Program.logger.LogWarn($"Attempted to edit an uploaded file with ID {id}, but it was not found.");
+                _logger.LogWarning("Edit requested for non-existent uploaded file {FileId}.", id);
                 return NotFound();
             }
             return View(uploadedFile);
@@ -91,14 +93,14 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id != uploadedFile.Id)
             {
-                Program.logger.LogWarn($"Attempted to edit an uploaded file with mismatched ID. Provided ID: {id}, UploadedFile ID: {uploadedFile.Id}");
+                _logger.LogWarning("Uploaded file edit ID mismatch: route {RouteId}, body {BodyId}.", id, uploadedFile.Id);
                 return NotFound();
             }
 
             var existing = await _context.UploadedFiles.FindAsync(id);
             if (existing == null)
             {
-                Program.logger.LogWarn($"Issue while editing uploaded file with ID {id}. The file was not found during update.");
+                _logger.LogWarning("Uploaded file {FileId} was not found during update.", id);
                 return NotFound();
             }
 
@@ -120,7 +122,7 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id == null)
             {
-                Program.logger.LogWarn("Attempted to access delete confirmation for an uploaded file with a null ID.");
+                _logger.LogWarning("Uploaded file delete requested without an ID.");
                 return NotFound();
             }
 
@@ -129,7 +131,7 @@ namespace ClinicBookingSystem.Controllers
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (uploadedFile == null)
             {
-                Program.logger.LogWarn($"Attempted to access delete confirmation for uploaded file with ID {id}, but it was not found.");
+                _logger.LogWarning("Delete requested for non-existent uploaded file {FileId}.", id);
                 return NotFound();
             }
 

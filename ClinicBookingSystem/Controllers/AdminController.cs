@@ -43,7 +43,7 @@ public class AdminController : Controller
         return View(model);
     }
 
-    [Authorize(Roles = "Admin")]        
+    [Authorize(Roles = "Admin")]
     public IActionResult Users()
     {
         var users = _userManager.Users.ToList();

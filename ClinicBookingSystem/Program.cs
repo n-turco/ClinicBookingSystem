@@ -15,17 +15,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Logger;
-using Microsoft.Identity.Client;
 namespace ClinicBookingSystem
 {
     public class Program
     {
-        public static Log logger = new Log("ClinicBookingLog");
         public static async Task Main(string[] args)
         {
-            
+
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddDbContext<ClinicBookingSystemContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("ClinicBookingSystemContext") ?? throw new InvalidOperationException("Connection string 'ClinicBookingSystemContext' not found.")));
@@ -38,7 +34,7 @@ namespace ClinicBookingSystem
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
                 options.Lockout.AllowedForNewUsers = true;
-            })  .AddEntityFrameworkStores<ClinicBookingSystemContext>()
+            }).AddEntityFrameworkStores<ClinicBookingSystemContext>()
                 .AddDefaultTokenProviders(); // Configure Identity to use the custom AppUser and the default IdentityRole
 
             // Add services to the container.
@@ -58,7 +54,6 @@ namespace ClinicBookingSystem
             });
 
             var app = builder.Build();
-            logger.LogInfo("Application started successfully.");
 
             using (var scope = app.Services.CreateScope())
             {
@@ -69,8 +64,7 @@ namespace ClinicBookingSystem
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
             {
-                logger.LogError("An error occurred while processing the request.");
-                app.UseExceptionHandler("/Home/Error");         
+                app.UseExceptionHandler("/Home/Error");
                 app.UseHsts();
             }
 

@@ -42,6 +42,7 @@ namespace ClinicBookingSystem.Data
             var context = services.GetRequiredService<ClinicBookingSystemContext>();
             var env = services.GetRequiredService<IWebHostEnvironment>();
             var config = services.GetRequiredService<IConfiguration>();
+            var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(SeedData));
 
             // 1. ROLES (required in every environment)
             string[] roles = { "Admin", "User" };
@@ -66,11 +67,11 @@ namespace ClinicBookingSystem.Data
             if (string.IsNullOrWhiteSpace(adminPassword))
             {
                 // Outside Development with no configured password: skip rather than fall back to a known password.
-                Program.logger.LogWarn("Seed:AdminPassword is not configured; skipping admin account seeding.");
+                logger.LogWarning("Seed:AdminPassword is not configured; skipping admin account seeding.");
             }
             else
             {
-                await EnsureUserAsync(userManager, adminEmail, adminPassword, "Admin");
+                await EnsureUserAsync(userManager, logger, adminEmail, adminPassword, "Admin");
             }
 
             // 3. SAMPLE USERS AND APPOINTMENTS (Development only)
@@ -81,7 +82,7 @@ namespace ClinicBookingSystem.Data
 
             foreach (var email in DemoUserEmails)
             {
-                await EnsureUserAsync(userManager, email, DevUserPassword, "User");
+                await EnsureUserAsync(userManager, logger, email, DevUserPassword, "User");
             }
 
             // 4. SAMPLE APPOINTMENTS
@@ -130,7 +131,7 @@ namespace ClinicBookingSystem.Data
         }
 
         // Creates the user (if missing) and assigns the role. Identity errors are logged instead of being silently ignored.
-        private static async Task EnsureUserAsync(UserManager<AppUser> userManager, string email, string password, string role)
+        private static async Task EnsureUserAsync(UserManager<AppUser> userManager, ILogger logger, string email, string password, string role)
         {
             if (await userManager.FindByEmailAsync(email) != null)
             {
@@ -147,14 +148,14 @@ namespace ClinicBookingSystem.Data
             var result = await userManager.CreateAsync(user, password);
             if (!result.Succeeded)
             {
-                Program.logger.LogError($"Failed to seed user {email}: {string.Join("; ", result.Errors.Select(e => e.Description))}");
+                logger.LogError("Failed to seed user {Email}: {Errors}", email, string.Join("; ", result.Errors.Select(e => e.Description)));
                 return;
             }
 
             var roleResult = await userManager.AddToRoleAsync(user, role);
             if (!roleResult.Succeeded)
             {
-                Program.logger.LogError($"Failed to add seeded user {email} to role {role}: {string.Join("; ", roleResult.Errors.Select(e => e.Description))}");
+                logger.LogError("Failed to add seeded user {Email} to role {Role}: {Errors}", email, role, string.Join("; ", roleResult.Errors.Select(e => e.Description)));
             }
         }
     }

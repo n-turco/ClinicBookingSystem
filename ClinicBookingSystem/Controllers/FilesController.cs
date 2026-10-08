@@ -21,11 +21,13 @@ public class FilesController : Controller
 {
     private readonly ClinicBookingSystemContext _context;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<FilesController> _logger;
 
-    public FilesController(ClinicBookingSystemContext context, IWebHostEnvironment env)
+    public FilesController(ClinicBookingSystemContext context, IWebHostEnvironment env, ILogger<FilesController> logger)
     {
         _context = context;
         _env = env;
+        _logger = logger;
     }
 
     // GET
@@ -42,7 +44,7 @@ public class FilesController : Controller
     {
         if (file == null || file.Length == 0)
         {
-            Program.logger.LogWarn("User attempted to upload an empty file.");
+            _logger.LogWarning("Upload rejected: empty file.");
             ModelState.AddModelError("", "Invalid file");
             return View();
         }
@@ -50,7 +52,7 @@ public class FilesController : Controller
         // SIZE LIMIT (5MB)
         if (file.Length > 5 * 1024 * 1024)
         {
-            Program.logger.LogWarn($"User attempted to upload a file that is too large: {file.FileName} ({file.Length} bytes).");
+            _logger.LogWarning("Upload rejected: file too large ({FileSize} bytes).", file.Length);
             ModelState.AddModelError("", "File too large");
             return View();
         }
@@ -71,7 +73,7 @@ public class FilesController : Controller
 
         if (!allowedTypes.Contains(file.ContentType))   //MIME type validation is not trusted alone, also checking file signatures.
         {
-            Program.logger.LogWarn($"User attempted to upload a file with an invalid content type: {file.FileName} ({file.ContentType}).");
+            _logger.LogWarning("Upload rejected: content type not allowed.");
             ModelState.AddModelError("", "Invalid file type");
             return View();
         }
@@ -92,13 +94,13 @@ public class FilesController : Controller
         using (FileStream stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
-            Program.logger.LogInfo($"Saving uploaded file: {file.FileName} as {uniqueFileName} at {filePath}");
+            _logger.LogInformation("Saved uploaded file as {StoredFileName}.", uniqueFileName);
         }
         // Save file metadata to database
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {
-            Program.logger.LogError("Authenticated user does not have a NameIdentifier claim. Unable to associate uploaded file with user.");
+            _logger.LogError("Authenticated user has no NameIdentifier claim; cannot associate uploaded file with a user.");
             // no user id claim unauthorized
             return Unauthorized();
         }
@@ -116,7 +118,7 @@ public class FilesController : Controller
 
         _context.UploadedFiles.Add(uploadedFile);
         await _context.SaveChangesAsync();
-        Program.logger.LogInfo($"File metadata saved to database for file: {file.FileName} (ID: {uploadedFile.Id}) associated with user ID: {userId}.");    
+        _logger.LogInformation("Saved metadata for file {FileId} owned by user {UserId}.", uploadedFile.Id, userId);
 
         return RedirectToAction("MyUploads");
     }
@@ -128,7 +130,7 @@ public class FilesController : Controller
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {
-            Program.logger.LogError("Authenticated user does not have a NameIdentifier claim. Unable to retrieve uploaded files for user.");
+            _logger.LogError("Authenticated user has no NameIdentifier claim; cannot list uploaded files.");
             return Unauthorized();
         }
         var userId = userIdClaim.Value;
@@ -148,7 +150,7 @@ public class FilesController : Controller
         var uploadedFile = await _context.UploadedFiles.FindAsync(id);
         if (uploadedFile == null)
         {
-            Program.logger.LogWarn($"ViewDocument requested for non-existent file ID {id}.");
+            _logger.LogWarning("ViewDocument requested for non-existent file {FileId}.", id);
             return NotFound();
         }
 
@@ -156,13 +158,13 @@ public class FilesController : Controller
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {
-            Program.logger.LogError("Authenticated user does not have a NameIdentifier claim. View denied.");
+            _logger.LogError("Authenticated user has no NameIdentifier claim; file view denied.");
             return Unauthorized();
         }
         var userId = userIdClaim.Value;
         if (uploadedFile.UserId != userId && !User.IsInRole("Admin"))
         {
-            Program.logger.LogWarn($"User {userId} attempted to view file {uploadedFile.Id} owned by {uploadedFile.UserId}.");
+            _logger.LogWarning("User {UserId} attempted to view file {FileId} owned by {OwnerId}.", userId, uploadedFile.Id, uploadedFile.UserId);
             return Forbid();
         }
 
@@ -177,20 +179,20 @@ public class FilesController : Controller
         if (string.IsNullOrEmpty(storedFileName) ||
             !physicalPath.StartsWith(uploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
         {
-            Program.logger.LogWarn($"Blocked file access outside the uploads folder for file ID {uploadedFile.Id}.");
+            _logger.LogWarning("Blocked file access outside the uploads folder for file {FileId}.", uploadedFile.Id);
             return NotFound();
         }
 
         if (!System.IO.File.Exists(physicalPath))
         {
-            Program.logger.LogWarn($"Requested file ID {uploadedFile.Id} not found on disk.");
+            _logger.LogWarning("File {FileId} not found on disk.", uploadedFile.Id);
             return NotFound();
         }
 
         // Content types that browsers can render inline
         var inlineContentTypes = new[] { "application/pdf", "image/jpeg", "image/png", "image/gif", "text/plain" };
 
-        Program.logger.LogInfo($"User {userId} is viewing file {uploadedFile.Id} from {physicalPath}.");
+        _logger.LogInformation("User {UserId} is viewing file {FileId}.", userId, uploadedFile.Id);
 
         var stream = System.IO.File.OpenRead(physicalPath);
         var contentType = uploadedFile.ContentType ?? "application/octet-stream";

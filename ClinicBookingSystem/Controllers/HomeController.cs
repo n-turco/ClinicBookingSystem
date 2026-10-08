@@ -10,6 +10,7 @@
 */
 using ClinicBookingSystem.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
@@ -18,9 +19,16 @@ namespace ClinicBookingSystem.Controllers
     [Authorize] // Ensure that only authenticated users can access the HomeController
     public class HomeController : Controller
     {
+        private readonly ILogger<HomeController> _logger;
+
+        public HomeController(ILogger<HomeController> logger)
+        {
+            _logger = logger;
+        }
+
         public IActionResult Index()
         {
-           return View();
+            return View();
         }
 
         public IActionResult Privacy()
@@ -31,7 +39,12 @@ namespace ClinicBookingSystem.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            Program.logger.LogError("An error occurred while processing the request."); 
+            // Log the actual exception captured by UseExceptionHandler, rather than a generic message.
+            var exceptionFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
+            if (exceptionFeature?.Error != null)
+            {
+                _logger.LogError(exceptionFeature.Error, "Unhandled exception while processing {Path}.", exceptionFeature.Path);
+            }
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
     }

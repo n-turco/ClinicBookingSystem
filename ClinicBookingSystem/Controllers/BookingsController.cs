@@ -41,7 +41,6 @@ namespace ClinicBookingSystem.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
-                
                 return Forbid(); // or return Challenge(); depending on desired behavior
             }
 
@@ -69,7 +68,6 @@ namespace ClinicBookingSystem.Controllers
 
             if (appointment == null || !appointment.IsAvailable)
             {
-                
                 return NotFound();
             }
 
@@ -85,7 +83,6 @@ namespace ClinicBookingSystem.Controllers
 
             if (appointment == null || !appointment.IsAvailable)
             {
-                
                 return BadRequest("Appointment not available");
             }
 
@@ -113,7 +110,6 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
-                
                 return Forbid();
             }
 
@@ -123,14 +119,12 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null)
             {
-               
                 return NotFound();
             }
 
             // SECURITY: Users can only edit their own bookings unless admin
             if (!User.IsInRole("Admin") && booking.UserId != user.Id)
             {
-
                 return Forbid();
             }
 
@@ -144,7 +138,6 @@ namespace ClinicBookingSystem.Controllers
         {
             if (id != updatedBooking.Id)
             {
-               
                 return BadRequest();
             }
 
@@ -152,7 +145,6 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
-               
                 return Forbid();
             }
 
@@ -162,14 +154,12 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null)
             {
-               
                 return NotFound();
             }
 
             // SECURITY: ownership enforcement
             if (!User.IsInRole("Admin") && booking.UserId != user.Id)
             {
-               
                 return Forbid();
             }
 
@@ -277,8 +267,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
-              
-                return Forbid(); 
+                return Forbid();
             }
 
             if (User.IsInRole("Admin"))

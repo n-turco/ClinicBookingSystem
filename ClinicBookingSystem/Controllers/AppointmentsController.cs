@@ -45,7 +45,7 @@ namespace ClinicBookingSystem.Controllers
         {
             return View();
         }
-        
+
 
         [Authorize]
         public IActionResult Search()
@@ -153,7 +153,7 @@ namespace ClinicBookingSystem.Controllers
 
             return View(appointment);
         }
-        
+
         [HttpPost, ActionName("Delete")]
         [Authorize(Roles = "Admin")]
         [ValidateAntiForgeryToken]
@@ -169,6 +169,6 @@ namespace ClinicBookingSystem.Controllers
 
             return RedirectToAction(nameof(Index));
         }
-      
+
     }
 }
