@@ -66,11 +66,8 @@ Additional sample users: `BobB@clinic.com`, `NickT@clinic.com`, `SaraS@clinic.co
 
 5. Open a browser and navigate to `https://localhost:5001` (or the port printed by the app). The seeded demo accounts will be available after the initial seed runs.
 
-## Developer Credentials / Notes
+## Developer
 
-- Project owner / maintainer account: use the seeded `admin@clinic.com` for administrative tasks during local development.
-- To create a developer account or reset credentials, use the `UserManager` APIs in code, or remove the seeded users/roles in `SeedData` and create new ones.
-- Seed data is executed during application startup (see `Program.cs`) inside a scoped service provider — modify `SeedData.InitializeAsync` if you want different initial users/roles or sample data.
-- Keep the `NoOpEmailSender` only for development; replace with a real `IEmailSender` implementation for sending confirmation emails in staging/production.
+Nicholas Turco
 
 ---
