@@ -34,7 +34,9 @@ Clinic Booking System is a Razor Pages web application for scheduling and managi
 
 ## Demo Credentials
 
-> These seeded demo accounts are created by `SeedData.InitializeAsync` for local development. Change or remove them before publishing to production.
+> These seeded demo accounts are created by `SeedData.InitializeAsync` **only when `ASPNETCORE_ENVIRONMENT=Development`**. In any other environment no demo users are created, and the admin account is only seeded if `Seed:AdminPassword` (and optionally `Seed:AdminEmail`) is supplied via user-secrets or environment variables, e.g. `dotnet user-secrets set "Seed:AdminPassword" "<strong password>"`.
+>
+> Accounts are locked for 15 minutes after 5 failed login attempts.
 
 - Administrator
   - Email: `admin@clinic.com`

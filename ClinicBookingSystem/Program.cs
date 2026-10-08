@@ -32,7 +32,12 @@ namespace ClinicBookingSystem
 
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
-                options.User.RequireUniqueEmail = true; 
+                options.User.RequireUniqueEmail = true;
+
+                // SECURITY: Lock an account for 15 minutes after 5 consecutive failed logins (applies to new users too).
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.AllowedForNewUsers = true;
             })  .AddEntityFrameworkStores<ClinicBookingSystemContext>()
                 .AddDefaultTokenProviders(); // Configure Identity to use the custom AppUser and the default IdentityRole
 

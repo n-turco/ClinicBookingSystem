@@ -15,6 +15,7 @@ using ClinicBookingSystem.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicBookingSystem.Controllers
@@ -40,7 +41,7 @@ namespace ClinicBookingSystem.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
-                Program.logger.LogWarn("Unauthenticated user attempted to access bookings index."); 
+                
                 return Forbid(); // or return Challenge(); depending on desired behavior
             }
 
@@ -68,7 +69,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (appointment == null || !appointment.IsAvailable)
             {
-                Program.logger.LogWarn($"User attempted to create a booking for an invalid or unavailable appointment (ID: {id}).");
+                
                 return NotFound();
             }
 
@@ -84,7 +85,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (appointment == null || !appointment.IsAvailable)
             {
-                Program.logger.LogWarn($"User attempted to confirm a booking for an invalid or unavailable appointment (ID: {id}).");
+                
                 return BadRequest("Appointment not available");
             }
 
@@ -112,7 +113,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
-                Program.logger.LogWarn("Unauthenticated user attempted to access booking edit page.");
+                
                 return Forbid();
             }
 
@@ -122,26 +123,28 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null)
             {
-                Program.logger.LogWarn($"User attempted to edit a non-existent booking (ID: {id}).");
+               
                 return NotFound();
             }
 
             // SECURITY: Users can only edit their own bookings unless admin
             if (!User.IsInRole("Admin") && booking.UserId != user.Id)
             {
-                Program.logger.LogWarn($"User (ID: {user.Id}) attempted to edit a booking they do not own (Booking ID: {id}).");
+
                 return Forbid();
             }
 
+            await PopulateAppointmentOptionsAsync(booking.AppointmentId);
             return View(booking);
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Booking updatedBooking)
+        // SECURITY: Only Id and AppointmentId are bound. UserId/CreatedAt can never be changed from the client.
+        public async Task<IActionResult> Edit(int id, [Bind("Id,AppointmentId")] Booking updatedBooking)
         {
             if (id != updatedBooking.Id)
             {
-                Program.logger.LogWarn($"User attempted to edit a booking with mismatched ID (URL ID: {id}, Booking ID: {updatedBooking.Id}).");
+               
                 return BadRequest();
             }
 
@@ -149,7 +152,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
-                Program.logger.LogWarn("Unauthenticated user attempted to submit booking edit.");
+               
                 return Forbid();
             }
 
@@ -159,21 +162,42 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null)
             {
-                Program.logger.LogWarn($"User attempted to edit a non-existent booking (ID: {id}).");   
+               
                 return NotFound();
             }
 
             // SECURITY: ownership enforcement
             if (!User.IsInRole("Admin") && booking.UserId != user.Id)
             {
-                Program.logger.LogWarn($"User (ID: {user.Id}) attempted to edit a booking they do not own (Booking ID: {id}).");
+               
                 return Forbid();
             }
 
-            // Update allowed fields only (prevents overposting)
-            booking.AppointmentId = updatedBooking.AppointmentId;
+            // Nothing to do if the appointment wasn't changed.
+            if (booking.AppointmentId == updatedBooking.AppointmentId)
+            {
+                return RedirectToAction(nameof(Index));
+            }
 
-            _context.Update(booking);
+            // SECURITY: The target appointment must exist, be free and be in the future. Without this check a
+            // user could move onto a slot someone else already booked (double booking / slot hijacking).
+            var newAppointment = await _context.Appointments.FindAsync(updatedBooking.AppointmentId);
+            if (newAppointment == null || !newAppointment.IsAvailable || newAppointment.StartTime <= DateTime.Now)
+            {
+                ModelState.AddModelError(nameof(Booking.AppointmentId), "The selected appointment is not available.");
+                await PopulateAppointmentOptionsAsync(booking.AppointmentId);
+                return View(booking);
+            }
+
+            // Swap the slots: release the old appointment and reserve the new one. Both changes are saved in a
+            // single SaveChangesAsync call, which EF Core wraps in one transaction.
+            if (booking.Appointment != null)
+            {
+                booking.Appointment.IsAvailable = true;
+            }
+            newAppointment.IsAvailable = false;
+            booking.AppointmentId = newAppointment.Id;
+
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
@@ -190,6 +214,9 @@ namespace ClinicBookingSystem.Controllers
 
             if (booking == null) return NotFound();
 
+            // SECURITY: ownership enforcement (previously any logged-in user could view/delete any booking by ID).
+            if (!await CanModifyAsync(booking)) return Forbid();
+
             return View(booking);
         }
 
@@ -197,15 +224,49 @@ namespace ClinicBookingSystem.Controllers
         [ValidateAntiForgeryToken] // Prevent CSRF attacks
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var booking = await _context.Bookings.FindAsync(id);
+            var booking = await _context.Bookings
+                .Include(b => b.Appointment)
+                .FirstOrDefaultAsync(b => b.Id == id);
 
             if (booking != null)
             {
+                // SECURITY: ownership enforcement on the state-changing request as well as the confirmation page.
+                if (!await CanModifyAsync(booking)) return Forbid();
+
+                // Release the slot so it can be booked again; previously it stayed unavailable forever.
+                if (booking.Appointment != null)
+                {
+                    booking.Appointment.IsAvailable = true;
+                }
+
                 _context.Bookings.Remove(booking);
                 await _context.SaveChangesAsync();
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // Returns true when the current user owns the booking or is an admin.
+        private async Task<bool> CanModifyAsync(Booking booking)
+        {
+            if (User.IsInRole("Admin")) return true;
+
+            var user = await _userManager.GetUserAsync(User);
+            return user != null && booking.UserId == user.Id;
+        }
+
+        // Builds the appointment dropdown for the Edit view: the booking's current slot plus every free future slot.
+        private async Task PopulateAppointmentOptionsAsync(int currentAppointmentId)
+        {
+            var options = await _context.Appointments
+                .Where(a => a.Id == currentAppointmentId || (a.IsAvailable && a.StartTime > DateTime.Now))
+                .OrderBy(a => a.StartTime)
+                .Select(a => new { a.Id, a.StartTime, a.EndTime })
+                .ToListAsync();
+
+            ViewBag.AppointmentId = new SelectList(
+                options.Select(a => new { a.Id, Label = $"{a.StartTime:g} - {a.EndTime:t}" }),
+                "Id", "Label", currentAppointmentId);
         }
         // USER: View their own bookings
         // ADMIN: View all bookings
@@ -216,7 +277,7 @@ namespace ClinicBookingSystem.Controllers
 
             if (user == null)
             {
-                Program.logger.LogWarn("Unauthenticated user attempted to access MyBookings page.");
+              
                 return Forbid(); 
             }
 

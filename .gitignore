@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Local audit / remediation plan (not for version control)
+AUDIT_PLAN.md
+
+# User-uploaded files (may contain patient data) must never be committed
+UploadedFiles/
+**/wwwroot/uploads/

@@ -18,31 +18,7 @@
                 <input asp-for="FileName" class="form-control" />
                 <span asp-validation-for="FileName" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="FilePath" class="control-label"></label>
-                <input asp-for="FilePath" class="form-control" />
-                <span asp-validation-for="FilePath" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="ContentType" class="control-label"></label>
-                <input asp-for="ContentType" class="form-control" />
-                <span asp-validation-for="ContentType" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="FileSize" class="control-label"></label>
-                <input asp-for="FileSize" class="form-control" />
-                <span asp-validation-for="FileSize" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UploadedAt" class="control-label"></label>
-                <input asp-for="UploadedAt" class="form-control" />
-                <span asp-validation-for="UploadedAt" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UserId" class="control-label"></label>
-                <select asp-for="UserId" class="form-control" asp-items="ViewBag.UserId"></select>
-                <span asp-validation-for="UserId" class="text-danger"></span>
-            </div>
+            @* SECURITY: FilePath, ContentType, size, upload time and owner are server-managed and intentionally not editable. *@
             <div class="form-group">
                 <input type="submit" value="Save" class="btn btn-primary" />
             </div>

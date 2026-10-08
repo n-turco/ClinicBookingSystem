@@ -166,10 +166,24 @@ public class FilesController : Controller
             return Forbid();
         }
 
-        var physicalPath = Path.Combine(_env.ContentRootPath, uploadedFile.FilePath ?? string.Empty);
+        // SECURITY: Never trust the stored FilePath as a path. Path.Combine discards the root when given an
+        // absolute path ("C:\...") and does not stop "..\" traversal, so a tampered record could read any file
+        // on the server. Only the file-name component is used, and the resolved path must stay inside the
+        // uploads folder.
+        var uploadsRoot = Path.GetFullPath(Path.Combine(_env.ContentRootPath, "UploadedFiles"));
+        var storedFileName = Path.GetFileName(uploadedFile.FilePath ?? string.Empty);
+        var physicalPath = Path.GetFullPath(Path.Combine(uploadsRoot, storedFileName));
+
+        if (string.IsNullOrEmpty(storedFileName) ||
+            !physicalPath.StartsWith(uploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            Program.logger.LogWarn($"Blocked file access outside the uploads folder for file ID {uploadedFile.Id}.");
+            return NotFound();
+        }
+
         if (!System.IO.File.Exists(physicalPath))
         {
-            Program.logger.LogWarn($"Requested file not found on disk: {physicalPath}");
+            Program.logger.LogWarn($"Requested file ID {uploadedFile.Id} not found on disk.");
             return NotFound();
         }
 

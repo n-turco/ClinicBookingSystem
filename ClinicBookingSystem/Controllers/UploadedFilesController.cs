@@ -22,6 +22,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicBookingSystem.Controllers
 {
+    // SECURITY: This controller exposes every user's file metadata, so it is restricted to admins.
+    // Previously it had no [Authorize] at all, allowing anonymous users to list, create, edit and delete records.
+    [Authorize(Roles = "Admin")]
     public class UploadedFilesController : Controller
     {
         private readonly ClinicBookingSystemContext _context;
@@ -58,31 +61,11 @@ namespace ClinicBookingSystem.Controllers
             return View(uploadedFile);
         }
 
-        // GET: UploadedFiles/Create
-        public IActionResult Create()
-        {
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id");
-            return View();
-        }
-
-        // POST: UploadedFiles/Create
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,FileName,FilePath,ContentType,FileSize,UploadedAt,UserId")] UploadedFile uploadedFile)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.Add(uploadedFile);
-                await _context.SaveChangesAsync();
-                Program.logger.LogInfo($"A new uploaded file record was created with ID {uploadedFile.Id} by user ID {uploadedFile.UserId}.");
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", uploadedFile.UserId);
-            return View(uploadedFile);
-        }
+        // SECURITY: The scaffolded Create actions were removed. File records must only be created by
+        // FilesController.Upload, which writes the physical file and sets FilePath/UserId server-side.
+        // Letting a client supply FilePath allowed pointing a record at any file on the server.
 
         // GET: UploadedFiles/Edit/5
-        [Authorize(Roles = "User")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -96,14 +79,15 @@ namespace ClinicBookingSystem.Controllers
                 Program.logger.LogWarn($"Attempted to edit an uploaded file with ID {id}, but it was not found.");
                 return NotFound();
             }
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", uploadedFile.UserId);
             return View(uploadedFile);
         }
 
         // POST: UploadedFiles/Edit/5
+        // SECURITY: Only the display FileName can be changed. FilePath, ContentType and UserId are server-owned
+        // and are never bound from the request (prevents overposting / re-pointing a record at another file).
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,FileName,FilePath,ContentType,FileSize,UploadedAt,UserId")] UploadedFile uploadedFile)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,FileName")] UploadedFile uploadedFile)
         {
             if (id != uploadedFile.Id)
             {
@@ -111,29 +95,24 @@ namespace ClinicBookingSystem.Controllers
                 return NotFound();
             }
 
-            if (ModelState.IsValid)
+            var existing = await _context.UploadedFiles.FindAsync(id);
+            if (existing == null)
             {
-                try
-                {
-                    _context.Update(uploadedFile);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!UploadedFileExists(uploadedFile.Id))
-                    {
-                        Program.logger.LogWarn($"Issue while editing uploaded file with ID {uploadedFile.Id}. The file was not found during update.");
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
+                Program.logger.LogWarn($"Issue while editing uploaded file with ID {id}. The file was not found during update.");
+                return NotFound();
             }
-            ViewData["UserId"] = new SelectList(_context.Set<AppUser>(), "Id", "Id", uploadedFile.UserId);
-            return View(uploadedFile);
+
+            if (string.IsNullOrWhiteSpace(uploadedFile.FileName))
+            {
+                ModelState.AddModelError(nameof(UploadedFile.FileName), "File name is required.");
+                return View(existing);
+            }
+
+            // Strip any directory components so the display name can't carry a path.
+            existing.FileName = Path.GetFileName(uploadedFile.FileName.Trim());
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: UploadedFiles/Delete/5
@@ -170,11 +149,6 @@ namespace ClinicBookingSystem.Controllers
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool UploadedFileExists(int id)
-        {
-            return _context.UploadedFiles.Any(e => e.Id == id);
         }
     }
 }
