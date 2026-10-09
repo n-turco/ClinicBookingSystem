@@ -39,6 +39,7 @@ namespace ClinicBookingSystem.Controllers
         // GET: UploadedFiles
         public async Task<IActionResult> Index()
         {
+            // Load every file record along with the user who uploaded it
             var clinicBookingSystemContext = _context.UploadedFiles.Include(u => u.User);
             return View(await clinicBookingSystemContext.ToListAsync());
         }
@@ -46,15 +47,19 @@ namespace ClinicBookingSystem.Controllers
         // GET: UploadedFiles/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            // Check if an ID was provided
             if (id == null)
             {
                 _logger.LogWarning("Uploaded file details requested without an ID.");
                 return NotFound();
             }
 
+            // Look up the file record and its uploader
             var uploadedFile = await _context.UploadedFiles
                 .Include(u => u.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
+            // Check if file exists
             if (uploadedFile == null)
             {
                 return NotFound();
@@ -70,11 +75,13 @@ namespace ClinicBookingSystem.Controllers
         // GET: UploadedFiles/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            // Check if an ID was provided
             if (id == null)
             {
                 return NotFound();
             }
 
+            // Check if file exists
             var uploadedFile = await _context.UploadedFiles.FindAsync(id);
             if (uploadedFile == null)
             {
@@ -91,12 +98,14 @@ namespace ClinicBookingSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,FileName")] UploadedFile uploadedFile)
         {
+            // Check the route ID matches the ID posted in the form body
             if (id != uploadedFile.Id)
             {
                 _logger.LogWarning("Uploaded file edit ID mismatch: route {RouteId}, body {BodyId}.", id, uploadedFile.Id);
                 return NotFound();
             }
 
+            // Check if file exists
             var existing = await _context.UploadedFiles.FindAsync(id);
             if (existing == null)
             {
@@ -104,6 +113,7 @@ namespace ClinicBookingSystem.Controllers
                 return NotFound();
             }
 
+            // Check if a file name was entered
             if (string.IsNullOrWhiteSpace(uploadedFile.FileName))
             {
                 ModelState.AddModelError(nameof(UploadedFile.FileName), "File name is required.");
@@ -112,23 +122,28 @@ namespace ClinicBookingSystem.Controllers
 
             // Strip any directory components so the display name can't carry a path.
             existing.FileName = Path.GetFileName(uploadedFile.FileName.Trim());
-            await _context.SaveChangesAsync();
 
+            // Save the new name and return to the file list
+            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
         // GET: UploadedFiles/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            // Check if an ID was provided
             if (id == null)
             {
                 _logger.LogWarning("Uploaded file delete requested without an ID.");
                 return NotFound();
             }
 
+            // Look up the file record and its uploader for the confirmation page
             var uploadedFile = await _context.UploadedFiles
                 .Include(u => u.User)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
+            // Check if file exists
             if (uploadedFile == null)
             {
                 _logger.LogWarning("Delete requested for non-existent uploaded file {FileId}.", id);
@@ -143,12 +158,14 @@ namespace ClinicBookingSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            // Remove the record if it still exists (it may already have been deleted)
             var uploadedFile = await _context.UploadedFiles.FindAsync(id);
             if (uploadedFile != null)
             {
                 _context.UploadedFiles.Remove(uploadedFile);
             }
 
+            // Save the change and return to the file list
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
