@@ -1,12 +1,12 @@
-﻿/*  
- FILE          : FilesController.cs 
+/*
+ FILE          : FilesController.cs
  PROJECT       : SECU2000 - Project
  PROGRAMMER    : Nick Turco | 9056530
  FIRST VERSION : 2026-04-12
- DESCRIPTION   : This file contains the FilesController class, which is responsible for handling file upload and management actions in the Clinic Booking System. 
-                 The controller includes actions for uploading files (with validation for file size and type) and viewing a user's uploaded files. 
-                 It uses ASP.NET Core MVC and is protected by authorization, allowing only authenticated users to access its actions. 
-                 The controller interacts with the database context to save metadata about uploaded files, including the file name, path, content type, upload time, and associated user ID. 
+ DESCRIPTION   : This file contains the FilesController class, which is responsible for handling file upload and management actions in the Clinic Booking System.
+                 The controller includes actions for uploading files (with validation for file size and type) and viewing a user's uploaded files.
+                 It uses ASP.NET Core MVC and is protected by authorization, allowing only authenticated users to access its actions.
+                 The controller interacts with the database context to save metadata about uploaded files, including the file name, path, content type, upload time, and associated user ID.
                  Uploaded files are stored in a designated "UploadedFiles" folder located relative to the application's content root (outside the web root).
                  The runtime path used is: Path.Combine(env.ContentRootPath, "UploadedFiles")
 */
@@ -16,6 +16,7 @@ using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
 using ClinicBookingSystem;
 
+// All actions require a logged-in user; viewing a file also checks ownership.
 [Authorize]
 public class FilesController : Controller
 {
@@ -23,6 +24,7 @@ public class FilesController : Controller
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<FilesController> _logger;
 
+    // Inject the database context, hosting environment (for the content root path) and logger through the constructor
     public FilesController(ClinicBookingSystemContext context, IWebHostEnvironment env, ILogger<FilesController> logger)
     {
         _context = context;
@@ -30,18 +32,21 @@ public class FilesController : Controller
         _logger = logger;
     }
 
-    // GET
+    // GET: Files/Upload
+    // USER: Show the upload form
     public IActionResult Upload()
     {
         return View();
     }
 
-    // POST
+    // POST: Files/Upload
+    // USER: Validate and store an uploaded file
     [HttpPost]
     [ValidateAntiForgeryToken]
     [Authorize]
     public async Task<IActionResult> Upload(IFormFile file)
     {
+        // Reject a missing or empty file
         if (file == null || file.Length == 0)
         {
             _logger.LogWarning("Upload rejected: empty file.");
@@ -71,7 +76,8 @@ public class FilesController : Controller
             "application/json"
         };
 
-        if (!allowedTypes.Contains(file.ContentType))   //MIME type validation is not trusted alone, also checking file signatures.
+        // NOTE: ContentType is sent by the client and can be spoofed. File signatures (magic bytes) are not checked yet.
+        if (!allowedTypes.Contains(file.ContentType))
         {
             _logger.LogWarning("Upload rejected: content type not allowed.");
             ModelState.AddModelError("", "Invalid file type");
@@ -81,16 +87,17 @@ public class FilesController : Controller
         // Save uploads to the designated uploads folder relative to the application's content root (outside web root)
         var contentRoot = _env.ContentRootPath ?? throw new InvalidOperationException("ContentRootPath is not configured");
         var uploadsFolder = Path.Combine(contentRoot, "UploadedFiles");
-        // ensure folder exists and has correct permissions
+        // Create the folder if it does not exist yet (no-op when it already does)
         Directory.CreateDirectory(uploadsFolder);
 
-        // sanitize original filename fallback if null/empty
+        // SECURITY: Path.GetFileName strips any directory part from the client-supplied name (blocks "..\" traversal)
         var originalFileName = Path.GetFileName(file.FileName ?? Guid.NewGuid().ToString());
 
         var uniqueFileName = Guid.NewGuid() + "_" + originalFileName;      // prepend GUID to ensure uniqueness and prevent overwriting
 
         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
+        // Write the uploaded bytes to disk
         using (FileStream stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
@@ -106,6 +113,7 @@ public class FilesController : Controller
         }
         var userId = userIdClaim.Value;
 
+        // SECURITY: The owner comes from the auth cookie, not from form data.
         UploadedFile uploadedFile = new UploadedFile
         {
             FileName = file.FileName,
@@ -123,10 +131,12 @@ public class FilesController : Controller
         return RedirectToAction("MyUploads");
     }
 
-    // View user uploads
+    // GET: Files/MyUploads
+    // USER: View user uploads
     [Authorize(Roles = "User")]
     public IActionResult MyUploads()
     {
+        // Identify the current user from their claims
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
         {
@@ -135,6 +145,7 @@ public class FilesController : Controller
         }
         var userId = userIdClaim.Value;
 
+        // Only list files owned by the current user
         var files = _context.UploadedFiles
             .Where(f => f.UserId == userId)
             .ToList();
@@ -147,6 +158,7 @@ public class FilesController : Controller
     [HttpGet]
     public async Task<IActionResult> ViewDocument(int id)
     {
+        // Look up the file's metadata record
         var uploadedFile = await _context.UploadedFiles.FindAsync(id);
         if (uploadedFile == null)
         {
@@ -183,6 +195,7 @@ public class FilesController : Controller
             return NotFound();
         }
 
+        // The metadata exists but the file itself is missing from disk
         if (!System.IO.File.Exists(physicalPath))
         {
             _logger.LogWarning("File {FileId} not found on disk.", uploadedFile.Id);
@@ -194,6 +207,7 @@ public class FilesController : Controller
 
         _logger.LogInformation("User {UserId} is viewing file {FileId}.", userId, uploadedFile.Id);
 
+        // The stream is disposed by the FileStreamResult once the response is sent
         var stream = System.IO.File.OpenRead(physicalPath);
         var contentType = uploadedFile.ContentType ?? "application/octet-stream";
 
@@ -204,6 +218,7 @@ public class FilesController : Controller
         }
         else
         {
+            // Anything else is downloaded rather than rendered
             Response.Headers["Content-Disposition"] = $"attachment; filename=\"{uploadedFile.FileName}\"";
         }
 

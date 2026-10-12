@@ -1,13 +1,13 @@
-﻿/*  
- FILE          : BookingsController.cs 
+/*
+ FILE          : BookingsController.cs
  PROJECT       : SECU2000 - Project
  PROGRAMMER    : Nick Turco | 9056530
  FIRST VERSION : 2026-04-12
- DESCRIPTION   : This file contains the BookingsController class, which is responsible for handling booking-related actions in the Clinic Booking System. 
-                 The controller includes actions for viewing bookings (with different views for users and admins), creating new bookings 
-                 for available appointments, and deleting bookings (admin only). It uses ASP.NET Core MVC and is protected by role-based 
-                 authorization, allowing users to view and manage their own bookings while giving administrators access to all bookings. 
-                 The controller interacts with the database context to retrieve and manipulate booking data, ensuring that appointments are 
+ DESCRIPTION   : This file contains the BookingsController class, which is responsible for handling booking-related actions in the Clinic Booking System.
+                 The controller includes actions for viewing bookings (with different views for users and admins), creating new bookings
+                 for available appointments, and deleting bookings (admin only). It uses ASP.NET Core MVC and is protected by role-based
+                 authorization, allowing users to view and manage their own bookings while giving administrators access to all bookings.
+                 The controller interacts with the database context to retrieve and manipulate booking data, ensuring that appointments are
                  marked as unavailable once booked to prevent double booking.
 */
 using ClinicBookingSystem.Data;
@@ -20,12 +20,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicBookingSystem.Controllers
 {
+    // All actions require a logged-in user; ownership checks inside each action decide what they can see or change.
     [Authorize]
     public class BookingsController : Controller
     {
         private readonly ClinicBookingSystemContext _context; // Database context for accessing booking and appointment data
         private readonly UserManager<AppUser> _userManager;
 
+        // Inject the database context and Identity user manager through the constructor
         public BookingsController(
             ClinicBookingSystemContext context,
             UserManager<AppUser> userManager)
@@ -34,16 +36,19 @@ namespace ClinicBookingSystem.Controllers
             _userManager = userManager;
         }
 
+        // GET: Bookings
         // ADMIN: View all bookings
         // USER: View only their bookings
         public async Task<IActionResult> Index()        // Both users and admins can access this, but content differs based on role
         {
+            // Look up the current user from the auth cookie
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
                 return Forbid(); // or return Challenge(); depending on desired behavior
             }
 
+            // Admins see every booking along with the user who made it
             if (User.IsInRole("Admin"))
             {
                 var allBookings = _context.Bookings
@@ -53,6 +58,7 @@ namespace ClinicBookingSystem.Controllers
                 return View(await allBookings.ToListAsync());
             }
 
+            // Regular users only see bookings they own
             var userBookings = _context.Bookings
                 .Where(b => b.UserId == user.Id)
                 .Include(b => b.Appointment);
@@ -61,11 +67,13 @@ namespace ClinicBookingSystem.Controllers
         }
 
 
+        // GET: Bookings/Create/5
         // USER: Create booking for an available appointment
         public async Task<IActionResult> Create(int id)
         {
             var appointment = await _context.Appointments.FindAsync(id);
 
+            // Only show the confirmation page for slots that exist and are still open
             if (appointment == null || !appointment.IsAvailable)
             {
                 return NotFound();
@@ -74,11 +82,13 @@ namespace ClinicBookingSystem.Controllers
             return View(appointment);
         }
 
+        // POST: Bookings/CreateConfirmed/5
         // USER: Confirm booking creation
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateConfirmed(int id)
         {
+            // Re-check availability on the POST, since the slot may have been taken after the GET page loaded
             var appointment = await _context.Appointments.FindAsync(id);
 
             if (appointment == null || !appointment.IsAvailable)
@@ -88,6 +98,7 @@ namespace ClinicBookingSystem.Controllers
 
             var user = await _userManager.GetUserAsync(User);
 
+            // SECURITY: The owner and timestamp come from the server, not from form data.
             var booking = new Booking
             {
                 AppointmentId = id,
@@ -98,11 +109,16 @@ namespace ClinicBookingSystem.Controllers
             // Prevent double booking
             appointment.IsAvailable = false;
 
+            // Save the booking and the appointment change together
             _context.Bookings.Add(booking);
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
         }
+
+        // GET: Bookings/Edit/5
+        // USER: Move their own booking to a different slot
+        // ADMIN: Move any booking
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
@@ -113,6 +129,7 @@ namespace ClinicBookingSystem.Controllers
                 return Forbid();
             }
 
+            // Load the booking with its current appointment
             var booking = await _context.Bookings
                 .Include(b => b.Appointment)
                 .FirstOrDefaultAsync(b => b.Id == id);
@@ -128,14 +145,18 @@ namespace ClinicBookingSystem.Controllers
                 return Forbid();
             }
 
+            // Fill the appointment dropdown before showing the form
             await PopulateAppointmentOptionsAsync(booking.AppointmentId);
             return View(booking);
         }
+
+        // POST: Bookings/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         // SECURITY: Only Id and AppointmentId are bound. UserId/CreatedAt can never be changed from the client.
         public async Task<IActionResult> Edit(int id, [Bind("Id,AppointmentId")] Booking updatedBooking)
         {
+            // The ID in the route must match the ID in the form
             if (id != updatedBooking.Id)
             {
                 return BadRequest();
@@ -148,6 +169,7 @@ namespace ClinicBookingSystem.Controllers
                 return Forbid();
             }
 
+            // Load the stored booking; changes are applied to this tracked entity, not the posted one
             var booking = await _context.Bookings
                 .Include(b => b.Appointment)
                 .FirstOrDefaultAsync(b => b.Id == id);
@@ -193,10 +215,15 @@ namespace ClinicBookingSystem.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // GET: Bookings/Delete/5
+        // USER: Confirm cancelling their own booking
+        // ADMIN: Confirm cancelling any booking
         public async Task<IActionResult> Delete(int? id)
         {
+            // Check if an ID was provided
             if (id == null) return NotFound();
 
+            // Load the booking with its appointment and owner for the confirmation page
             var booking = await _context.Bookings
                 .Include(b => b.Appointment)
                 .Include(b => b.User)
@@ -210,6 +237,7 @@ namespace ClinicBookingSystem.Controllers
             return View(booking);
         }
 
+        // POST: Bookings/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken] // Prevent CSRF attacks
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -229,6 +257,7 @@ namespace ClinicBookingSystem.Controllers
                     booking.Appointment.IsAvailable = true;
                 }
 
+                // Remove the booking and save the appointment change in the same call
                 _context.Bookings.Remove(booking);
                 await _context.SaveChangesAsync();
             }
@@ -254,10 +283,12 @@ namespace ClinicBookingSystem.Controllers
                 .Select(a => new { a.Id, a.StartTime, a.EndTime })
                 .ToListAsync();
 
+            // Build readable labels such as "4/12/2026 9:00 AM - 9:30 AM", with the current slot preselected
             ViewBag.AppointmentId = new SelectList(
                 options.Select(a => new { a.Id, Label = $"{a.StartTime:g} - {a.EndTime:t}" }),
                 "Id", "Label", currentAppointmentId);
         }
+        // GET: Bookings/MyBookings
         // USER: View their own bookings
         // ADMIN: View all bookings
         [Authorize]
@@ -270,6 +301,7 @@ namespace ClinicBookingSystem.Controllers
                 return Forbid();
             }
 
+            // Admins see every booking along with the user who made it
             if (User.IsInRole("Admin"))
             {
                 var allBookings = _context.Bookings
@@ -280,6 +312,7 @@ namespace ClinicBookingSystem.Controllers
                 return View(allBookings);
             }
 
+            // Regular users only see bookings they own
             var userBookings = _context.Bookings
                 .Where(b => b.UserId == user.Id)
                 .Include(b => b.Appointment)
