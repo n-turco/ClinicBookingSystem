@@ -12,7 +12,7 @@ It was built for SECU2000 (Application Security), so it puts particular weight o
 - Register, log in and log out
 - Browse and search available appointments, then book one
 - View their own bookings, change a booking to another free slot, or cancel it (the slot is released again)
-- Upload documents (PDF, images, text/CSV, Word, Excel, JSON; max 5 MB) and view or download their own uploads
+- Upload documents (PDF, images, text/CSV, Word, Excel, JSON; max 5 MB; text files must be UTF-8) and view or download their own uploads
 
 **Administrators (Admin role)**
 - Dashboard with system totals
@@ -36,7 +36,7 @@ ClinicBookingSystem/
 ├── Data/                 DbContext and SeedData
 ├── Migrations/           EF Core migrations
 ├── Models/               Appointment, Booking, UploadedFile, AppUser, view models
-├── Services/             NoOpEmailSender (placeholder email sender)
+├── Services/             FileSignatureValidator (upload type checks), NoOpEmailSender (placeholder email sender)
 ├── Views/                MVC views
 └── UploadedFiles/        Uploaded documents (created at runtime, git-ignored)
 ```
@@ -60,7 +60,28 @@ ClinicBookingSystem/
 - Booking changes are checked so a user can't double-book or take an already booked slot
 - Uploads are stored outside `wwwroot` with GUID-prefixed names and served only through an authenticated, owner-checked endpoint
 - Download paths are resolved and confined to the uploads folder, which blocks path traversal
-- Uploads are capped by size and limited to an allow-list of types
+- Download file names are encoded with `ContentDispositionHeaderValue`, so a crafted name can't inject header parameters
+
+**Upload validation** (`FilesController.Upload`, using `Services/FileSignatureValidator`)
+
+Each upload must pass every check, in this order:
+
+1. **Size:** not empty and at most 5 MB
+2. **Content type:** the declared type is on the allow-list
+3. **Extension:** the file name's extension matches the declared type (for example `.png` for `image/png`, `.jpg`/`.jpeg` for `image/jpeg`). Names with invalid file-name characters are rejected, which blocks Windows alternate-data-stream names such as `notes.html:.png`
+4. **Contents:** the bytes match the declared type:
+
+| Type | Check |
+|---|---|
+| JPEG, PNG, PDF, Word `.doc` | File starts with the format's signature (magic bytes) |
+| Word `.docx`, Excel `.xlsx` | Valid ZIP containing the format's main part; nothing is decompressed, so a ZIP bomb can't expand |
+| Text, CSV | Strict UTF-8 with no control characters other than tab, CR and LF |
+| JSON | Same text check, and it must parse as JSON |
+
+The bytes that are validated are the same bytes written to disk. Admin renames in `UploadedFilesController.Edit` must also keep an extension that matches the stored type, since the display name becomes the download file name.
+
+**Response headers**
+- `X-Content-Type-Options: nosniff` is sent on every response (including error pages), so browsers use the declared content type instead of guessing it
 
 **Logging**
 - Logging uses ASP.NET Core's built-in `ILogger<T>` with structured message templates
@@ -115,9 +136,7 @@ Additional sample users: `BobB@clinic.com`, `NickT@clinic.com`, `SaraS@clinic.co
 ## Roadmap
 
 ### Next: security hardening
-- **Upload validation:** check the file extension and file signature (magic bytes), and set the stored content type on the server
-- **Downloads:** encode file names safely in download headers
-- **Response headers:** add a Content Security Policy, `X-Content-Type-Options`, `X-Frame-Options` and `Referrer-Policy`
+- **Response headers:** add a Content Security Policy, `X-Frame-Options` and `Referrer-Policy`
 - **Booking concurrency:** add a concurrency token plus a unique index on bookings, so a slot can only be booked once under load; reject bookings for past appointments
 - **Accounts:** stronger password policy, real email delivery and required email confirmation
 - **Rate limiting:** limit requests to login, registration and upload
