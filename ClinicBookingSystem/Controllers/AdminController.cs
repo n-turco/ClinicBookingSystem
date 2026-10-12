@@ -15,6 +15,7 @@ using ClinicBookingSystem.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 // SECURITY: Every action in this controller exposes system-wide data, so the whole class is restricted to admins.
 [Authorize(Roles = "Admin")]
@@ -35,15 +36,16 @@ public class AdminController : Controller
     // GET: Admin/Dashboard
     // Ensure that only users with the "Admin" role can access the Dashboard action
     [Authorize(Roles = "Admin")]
-    public IActionResult Dashboard()
+    public async Task<IActionResult> Dashboard()
     {
-        // Build the dashboard view model from record counts across the system
+        // Build the dashboard view model from record counts across the system.
+        // The counts are awaited one at a time because a DbContext does not support concurrent queries.
         var model = new AdminDashboardViewModel
         {
-            TotalBookings = _context.Bookings.Count(),
-            TotalAppointments = _context.Appointments.Count(),
-            TotalUsers = _userManager.Users.Count(),
-            TotalUploads = _context.UploadedFiles.Count()
+            TotalBookings = await _context.Bookings.CountAsync(),
+            TotalAppointments = await _context.Appointments.CountAsync(),
+            TotalUsers = await _userManager.Users.CountAsync(),
+            TotalUploads = await _context.UploadedFiles.CountAsync()
         };
 
         return View(model);
@@ -52,10 +54,10 @@ public class AdminController : Controller
     // GET: Admin/Users
     // Ensure that only users with the "Admin" role can view the list of registered users
     [Authorize(Roles = "Admin")]
-    public IActionResult Users()
+    public async Task<IActionResult> Users()
     {
         // Load every registered user account for the user management view
-        var users = _userManager.Users.ToList();
+        var users = await _userManager.Users.ToListAsync();
         return View(users);
     }
 }
