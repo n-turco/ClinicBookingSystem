@@ -62,6 +62,20 @@ namespace ClinicBookingSystem
             }
 
             // Configure the HTTP request pipeline.
+
+            // SECURITY: Send X-Content-Type-Options: nosniff on every response so browsers use the declared Content-Type
+            // instead of guessing it from the body (e.g. rendering an uploaded "text/plain" file as HTML).
+            // Added in OnStarting so it survives UseExceptionHandler, which clears headers set earlier in the request.
+            app.Use(async (context, next) =>
+            {
+                context.Response.OnStarting(() =>
+                {
+                    context.Response.Headers.XContentTypeOptions = "nosniff";
+                    return Task.CompletedTask;
+                });
+                await next();
+            });
+
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
