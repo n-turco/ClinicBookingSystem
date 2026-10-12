@@ -13,6 +13,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
 using ClinicBookingSystem;
@@ -212,16 +213,18 @@ public class FilesController : Controller
         var stream = System.IO.File.OpenRead(physicalPath);
         var contentType = uploadedFile.ContentType ?? "application/octet-stream";
 
-        if (inlineContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
-        {
-            // Tell browser to display inline
-            Response.Headers["Content-Disposition"] = $"inline; filename=\"{uploadedFile.FileName}\"";
-        }
-        else
-        {
-            // Anything else is downloaded rather than rendered
-            Response.Headers["Content-Disposition"] = $"attachment; filename=\"{uploadedFile.FileName}\"";
-        }
+        // Browser-renderable types are displayed inline; anything else is downloaded rather than rendered
+        var dispositionType = inlineContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase)
+            ? "inline"
+            : "attachment";
+
+        // SECURITY: The file name was supplied by the uploader. Building the header by string interpolation let a name
+        // containing quotes, semicolons or control characters break out of the filename parameter and inject extra
+        // header parameters. SetHttpFileName quotes and escapes the ASCII filename and adds an RFC 5987 encoded
+        // filename* for non-ASCII names.
+        var disposition = new ContentDispositionHeaderValue(dispositionType);
+        disposition.SetHttpFileName(uploadedFile.FileName ?? storedFileName);
+        Response.Headers.ContentDisposition = disposition.ToString();
 
         return File(stream, contentType);
     }
