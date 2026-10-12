@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
+using ClinicBookingSystem.Services;
 using ClinicBookingSystem;
 
 // All actions require a logged-in user; viewing a file also checks ownership.
@@ -78,11 +79,28 @@ public class FilesController : Controller
             "application/json"
         };
 
-        // NOTE: ContentType is sent by the client and can be spoofed. File signatures (magic bytes) are not checked yet.
+        // ContentType is sent by the client and can be spoofed, so this is only a first filter; the contents are checked below.
         if (!allowedTypes.Contains(file.ContentType))
         {
             _logger.LogWarning("Upload rejected: content type not allowed.");
             ModelState.AddModelError("", "Invalid file type");
+            return View();
+        }
+
+        // Read the upload into memory (capped at 5MB above) so the bytes that are validated are the same bytes saved to disk
+        byte[] content;
+        using (var buffer = new MemoryStream())
+        {
+            await file.CopyToAsync(buffer);
+            content = buffer.ToArray();
+        }
+
+        // SECURITY: Check the file signature (magic bytes) against the claimed content type, e.g. an executable
+        // renamed to photo.png with ContentType "image/png" is rejected here.
+        if (!FileSignatureValidator.IsValid(content, file.ContentType))
+        {
+            _logger.LogWarning("Upload rejected: contents do not match content type {ContentType}.", file.ContentType);
+            ModelState.AddModelError("", "File contents do not match the file type");
             return View();
         }
 
@@ -99,12 +117,9 @@ public class FilesController : Controller
 
         var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-        // Write the uploaded bytes to disk
-        using (FileStream stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-            _logger.LogInformation("Saved uploaded file as {StoredFileName}.", uniqueFileName);
-        }
+        // Write the validated bytes to disk
+        await System.IO.File.WriteAllBytesAsync(filePath, content);
+        _logger.LogInformation("Saved uploaded file as {StoredFileName}.", uniqueFileName);
         // Save file metadata to database
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userIdClaim == null)
