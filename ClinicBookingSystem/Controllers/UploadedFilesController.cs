@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
+using ClinicBookingSystem.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicBookingSystem.Controllers
@@ -121,7 +122,17 @@ namespace ClinicBookingSystem.Controllers
             }
 
             // Strip any directory components so the display name can't carry a path.
-            existing.FileName = Path.GetFileName(uploadedFile.FileName.Trim());
+            var newFileName = Path.GetFileName(uploadedFile.FileName.Trim());
+
+            // SECURITY: The display name becomes the download file name, so it must keep an extension that matches
+            // the stored content type (e.g. renaming data.json to data.html would make the browser save it as HTML).
+            if (!FileSignatureValidator.HasAllowedExtension(newFileName, existing.ContentType))
+            {
+                ModelState.AddModelError(nameof(UploadedFile.FileName), "File extension does not match the file type.");
+                return View(existing);
+            }
+
+            existing.FileName = newFileName;
 
             // Save the new name and return to the file list
             await _context.SaveChangesAsync();
