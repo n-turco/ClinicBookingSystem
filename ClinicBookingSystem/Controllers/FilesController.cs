@@ -12,6 +12,7 @@
 */
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Net.Http.Headers;
 using ClinicBookingSystem.Data;
 using ClinicBookingSystem.Models;
@@ -135,7 +136,7 @@ public class FilesController : Controller
     // GET: Files/MyUploads
     // USER: View user uploads
     [Authorize(Roles = "User")]
-    public IActionResult MyUploads()
+    public async Task<IActionResult> MyUploads()
     {
         // Identify the current user from their claims
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
@@ -147,9 +148,9 @@ public class FilesController : Controller
         var userId = userIdClaim.Value;
 
         // Only list files owned by the current user
-        var files = _context.UploadedFiles
+        var files = await _context.UploadedFiles
             .Where(f => f.UserId == userId)
-            .ToList();
+            .ToListAsync();
 
         return View(files);
     }

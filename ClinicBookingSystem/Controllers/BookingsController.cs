@@ -304,19 +304,19 @@ namespace ClinicBookingSystem.Controllers
             // Admins see every booking along with the user who made it
             if (User.IsInRole("Admin"))
             {
-                var allBookings = _context.Bookings
+                var allBookings = await _context.Bookings
                     .Include(b => b.Appointment)
                     .Include(b => b.User)
-                    .ToList();
+                    .ToListAsync();
 
                 return View(allBookings);
             }
 
             // Regular users only see bookings they own
-            var userBookings = _context.Bookings
+            var userBookings = await _context.Bookings
                 .Where(b => b.UserId == user.Id)
                 .Include(b => b.Appointment)
-                .ToList();
+                .ToListAsync();
 
             return View(userBookings);
         }
