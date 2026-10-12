@@ -87,6 +87,17 @@ public class FilesController : Controller
             return View();
         }
 
+        // SECURITY: Path.GetFileName strips any directory part from the client-supplied name (blocks "..\" traversal)
+        var originalFileName = Path.GetFileName(file.FileName ?? Guid.NewGuid().ToString());
+
+        // SECURITY: The extension must match the claimed content type, e.g. a valid PNG named "page.html" is rejected.
+        if (!FileSignatureValidator.HasAllowedExtension(originalFileName, file.ContentType))
+        {
+            _logger.LogWarning("Upload rejected: file extension does not match content type {ContentType}.", file.ContentType);
+            ModelState.AddModelError("", "File extension does not match the file type");
+            return View();
+        }
+
         // Read the upload into memory (capped at 5MB above) so the bytes that are validated are the same bytes saved to disk
         byte[] content;
         using (var buffer = new MemoryStream())
@@ -109,9 +120,6 @@ public class FilesController : Controller
         var uploadsFolder = Path.Combine(contentRoot, "UploadedFiles");
         // Create the folder if it does not exist yet (no-op when it already does)
         Directory.CreateDirectory(uploadsFolder);
-
-        // SECURITY: Path.GetFileName strips any directory part from the client-supplied name (blocks "..\" traversal)
-        var originalFileName = Path.GetFileName(file.FileName ?? Guid.NewGuid().ToString());
 
         var uniqueFileName = Guid.NewGuid() + "_" + originalFileName;      // prepend GUID to ensure uniqueness and prevent overwriting
 

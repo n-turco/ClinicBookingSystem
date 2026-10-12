@@ -7,7 +7,8 @@
                  match the content type the client claimed for it. The browser-supplied ContentType is easy to spoof, so
                  binary formats are checked against their file signature (magic bytes), Office Open XML files are opened
                  as ZIP archives and checked for their main part, and text formats are checked for valid UTF-8 with no
-                 binary control characters (JSON must also parse).
+                 binary control characters (JSON must also parse). It also checks that the file name's extension is
+                 one of the extensions expected for the claimed content type.
 */
 using System.IO.Compression;
 using System.Text;
@@ -25,6 +26,34 @@ namespace ClinicBookingSystem.Services
 
         // Strict decoder: throws on invalid UTF-8 instead of silently substituting characters
         private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
+        // Extensions accepted for each allowed content type (compared case-insensitively)
+        private static readonly Dictionary<string, string[]> AllowedExtensions = new()
+        {
+            ["image/jpeg"] = new[] { ".jpg", ".jpeg" },
+            ["image/png"] = new[] { ".png" },
+            ["application/pdf"] = new[] { ".pdf" },
+            ["text/plain"] = new[] { ".txt" },
+            ["text/csv"] = new[] { ".csv" },
+            ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = new[] { ".xlsx" },
+            ["application/msword"] = new[] { ".doc" },
+            ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"] = new[] { ".docx" },
+            ["application/json"] = new[] { ".json" }
+        };
+
+        // Returns true when the file name ends in an extension expected for the claimed content type,
+        // e.g. "photo.png" for image/png. Names without an extension, or with a mismatched one, fail.
+        public static bool HasAllowedExtension(string? fileName, string? contentType)
+        {
+            if (string.IsNullOrWhiteSpace(fileName) || contentType == null) return false;
+
+            // SECURITY: Reject characters that are not valid in a file name. On Windows, "notes.html:.png" has the
+            // extension ".png" but saving it writes the data to an alternate data stream of a file named "notes.html".
+            if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return false;
+
+            return AllowedExtensions.TryGetValue(contentType, out var extensions) &&
+                   extensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase);
+        }
 
         // Returns true when the file contents are consistent with the claimed content type.
         // Unknown content types always fail.
